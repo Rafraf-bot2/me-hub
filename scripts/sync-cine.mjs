@@ -162,8 +162,40 @@ async function main() {
   // headless, headed, and stealth all fail at submit). Browsing with an injected
   // cookie never triggers Turnstile, so the cron scrapes unattended.
   const cookie = process.env.LB_COOKIE;
+
+  // The cron sets REQUIRE_AUTH=1: there we must NEVER run unauthenticated, because
+  // no-cookie mode only sees page 1 (~33 films) and would auto-commit a shrunken
+  // gallery. A missing cookie in CI = misconfigured/forgotten secret → fail loud
+  // (the guard below only catches an EXPIRED cookie, not an absent one). Locally,
+  // REQUIRE_AUTH is unset, so page-1 dev runs without a cookie still work.
+  if (process.env.REQUIRE_AUTH && !cookie) {
+    throw new Error(
+      'REQUIRE_AUTH is set but LB_COOKIE is empty. Set the LB_COOKIE repo secret ' +
+      '(Settings → Secrets and variables → Actions) before the sync can run. ' +
+      'Aborting WITHOUT touching src/data/cine.json.'
+    );
+  }
+
   lb = await openLb(cookie);
   console.log(`Browser ready ${cookie ? '(authenticated via LB_COOKIE)' : '(no cookie — page 1 of ratings only)'}.`);
+
+  // Guard: a cookie that's present but expired loads pages logged-out (200, but
+  // ~72 recent films only) → the gallery would silently shrink. When a cookie is
+  // supplied we REQUIRE a live session; otherwise fail hard and leave cine.json
+  // untouched. In the weekly cron, this non-zero exit is the cookie-expired signal
+  // (GitHub emails the failure → time to refresh LB_COOKIE).
+  if (cookie) {
+    const live = await lb.isSessionLive();
+    if (!live) {
+      throw new Error(
+        'LB_COOKIE is set but the Letterboxd session is no longer logged in (expired). ' +
+        'Refresh it: in Safari logged into Letterboxd → DevTools → Network → reload → ' +
+        'first letterboxd.com request → copy the Cookie header → update the LB_COOKIE ' +
+        'secret. Aborting WITHOUT touching src/data/cine.json.'
+      );
+    }
+    console.log('Session verified live (logged in).');
+  }
 
   console.log(`\nScraping lists for @${USER} ...`);
   const listSlugs = await getLists();

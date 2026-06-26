@@ -36,6 +36,14 @@ export async function openLb(cookieHeader) {
       if (status !== 200) throw new Error(`LB ${status} on ${path}`);
       return page.content();
     },
+    // Confirm the injected cookie is still a live session. A logged-in Letterboxd
+    // page exposes a /sign-out/ link and tags <body class="… logged-in …">; a stale
+    // cookie loads the same URLs (200) but logged-out, silently shrinking the gallery.
+    // We check the marker so the caller can fail loudly instead of overwriting data.
+    async isSessionLive() {
+      const html = await this.get('/');
+      return /href="\/sign-out\/"/.test(html) || /\blogged-in\b/.test(html);
+    },
     async close() { await browser.close().catch(() => {}); },
   };
 }

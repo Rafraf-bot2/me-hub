@@ -70,13 +70,14 @@ Idée auteur : rendre le site plus vivant en changeant les frames régulièremen
 - Cloudflare : **0 build/0 bande passante en plus** (frames = hotlinks CDN TMDB ; le fichier ne change pas entre syncs). Cycle ~32 j avant répétition pour les films à 16 frames ; le sync hebdo renouvelle le lot en prime.
 - Vérifié : logique de rotation testée en Node (stable 2j, avance+boucle, désync OK) + build prod OK. Rendu WebGL non capturé (conflit port preview vs serveur :4321).
 
-## Phase 2 — Automatisation hebdo (GitHub Action) — À FAIRE
+## Phase 2 — Automatisation hebdo (GitHub Action) — CODE FAIT ✅ (2026-06-27), reste config repo
 
-- [ ] **Garde-fou cookie expiré (à faire AVANT le cron)** : check d'auth au démarrage de `sync-cine.mjs` — charger une page LB et vérifier le marqueur de session (`/sign-out/`). Si `LB_COOKIE` présent mais session invalide → **échouer fort** (exit ≠ 0, message clair) et NE PAS écraser `cine.json`. Sinon dégradation silencieuse (galerie rétréci). En cron, l'échec = mail GitHub auto = le signal d'expiration.
-- [ ] Secret GitHub repo : **`LB_COOKIE`** (le cookie capturé) + `TMDB_READ_TOKEN`. (Plus de `LB_USER`/`LB_PASS` — auto-login mort.)
-- [ ] `.github/workflows/sync-cine.yml` : cron hebdo + `workflow_dispatch` → `npm ci` → `npx playwright install --with-deps chromium` → `node scripts/sync-cine.mjs` → commit `cine.json` si changé → push → rebuild Cloudflare auto.
-- [ ] ⚠️ **Refresh du cookie** : la session Letterboxd dure des mois mais finit par expirer. Quand le cron échoue (cookie mort), refaire la capture manuelle : Safari connecté à LB → DevTools → Réseau → recharger → 1ère requête `letterboxd.com` → en-tête `Cookie` → copier → mettre à jour le secret `LB_COOKIE`. (~95% "0 geste", refresh rare.)
-- [ ] Tester l'Action en manuel (`workflow_dispatch`).
+- [x] **Garde-fou cookie expiré** : `lb.isSessionLive()` (dans `lb-browser.mjs`) charge `/` et cherche le marqueur `/sign-out/` ou `logged-in`. `sync-cine.mjs` l'appelle juste après `openLb` : si `LB_COOKIE` présent mais session morte → `throw` (message clair) → **exit 1, `cine.json` NON touché**. Testé : cookie bidon → exit 1 + `cine.json` intact. En cron, exit 1 = mail GitHub = signal d'expiration.
+- [x] **Garde-fou cookie ABSENT en CI** (footgun évité) : le workflow pose `REQUIRE_AUTH=1`. `sync-cine.mjs` : si `REQUIRE_AUTH` set ET pas de `LB_COOKIE` → exit 1 avant même de lancer le browser. Sinon, un cron lancé avant que le secret existe tournerait en mode page-1 (non-auth) → galerie 70→~33 → commit auto de la régression. En local (REQUIRE_AUTH absent) le mode page-1 reste permis. Testé : exit 1.
+- [x] `.github/workflows/sync-cine.yml` : cron `0 6 * * 1` (lundi 06:00 UTC) + `workflow_dispatch` → `npm ci` → `npx playwright install --with-deps chromium` → `node scripts/sync-cine.mjs` (env `LB_COOKIE`+`TMDB_READ_TOKEN`) → commit `cine.json` si changé (`[skip ci]`) → push → rebuild Cloudflare auto. `permissions: contents:write`, `concurrency` group, timeout 20 min.
+- [ ] **(MANUEL — à faire par l'auteur sur GitHub)** Secrets repo : **`LB_COOKIE`** (le cookie capturé, celui de `.env`) + **`TMDB_READ_TOKEN`**. Settings → Secrets and variables → Actions → New repository secret. (Plus de `LB_USER`/`LB_PASS` — auto-login mort.)
+- [ ] **(MANUEL)** Tester l'Action en manuel : Actions → "Sync /cine" → Run workflow. Vérifier le run vert + le commit auto si changement.
+- [ ] ⚠️ **Refresh du cookie** (rare, quand le cron échoue) : Safari connecté à LB → DevTools → Réseau → recharger → 1ère requête `letterboxd.com` → en-tête `Cookie` → copier → mettre à jour le secret `LB_COOKIE`. (~95% "0 geste".)
 
 ## Phase 3 — Nettoyage ✅ (fait en Phase 1)
 - [x] `scripts/scrape_letterboxd.py` + README supprimés.

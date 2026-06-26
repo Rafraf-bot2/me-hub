@@ -1,0 +1,62 @@
+name: Sync /cine
+
+# Weekly resync of the /cine gallery from Letterboxd + TMDB.
+# Re-scrapes rafraf30's rated films & lists, regenerates src/data/cine.json,
+# and commits it if anything changed. Pushing to main triggers the Cloudflare
+# Workers rebuild automatically — no deploy step needed here.
+#
+# Auth: LB_COOKIE is a Letterboxd session captured by hand from a real browser
+# (auto-login is impossible — sign-in is behind Cloudflare Turnstile). The sync
+# script fails hard if that cookie is present but expired, so a failed run here
+# (→ GitHub emails you) is the signal to refresh the LB_COOKIE secret.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # every Monday 06:00 UTC
+  workflow_dispatch: {} # allow manual runs from the Actions tab
+
+# Let the job push the regenerated cine.json back to the repo.
+permissions:
+  contents: write
+
+# Never run two syncs at once (they'd race on the commit/push).
+concurrency:
+  group: sync-cine
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Sync cine.json
+        env:
+          LB_COOKIE: ${{ secrets.LB_COOKIE }}
+          TMDB_READ_TOKEN: ${{ secrets.TMDB_READ_TOKEN }}
+          REQUIRE_AUTH: '1' # fail loud if the cookie is missing/expired — never auto-commit a shrunken gallery
+        run: node scripts/sync-cine.mjs
+
+      - name: Commit & push if changed
+        run: |
+          if git diff --quiet -- src/data/cine.json; then
+            echo "No change in cine.json — nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/cine.json
+          git commit -m "chore(cine): weekly Letterboxd resync [skip ci]"
+          git push
