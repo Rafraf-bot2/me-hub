@@ -1,0 +1,53 @@
+<!-- @dsCard group="Hub — freshman.tv" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traitement VHS — curseurs grain / aberration / scanlines</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono&display=swap">
+<style>
+  :root{--grain:.5;--aberr:2px;--scan:.28;--sat:.5}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0c0b0a;min-height:100vh;display:flex;flex-direction:column}
+  .screen{position:relative;flex:1;min-height:360px;overflow:hidden}
+  .foot{position:absolute;inset:0;background:linear-gradient(115deg,#2a2420,#0c0b0a 45%,#161a1c);filter:saturate(var(--sat)) contrast(1.1)}
+  .big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Anton',sans-serif;font-size:120px;color:#f3ede2;letter-spacing:-2px;
+       text-shadow:var(--aberr) 0 rgba(255,30,90,.55),calc(var(--aberr)*-1) 0 rgba(0,225,235,.5);z-index:2}
+  .scan{position:absolute;inset:0;z-index:3;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,var(--scan)) 0,rgba(0,0,0,var(--scan)) 1px,transparent 2px,transparent 4px)}
+  .grain{position:absolute;inset:0;z-index:4;opacity:var(--grain);mix-blend-mode:overlay;pointer-events:none}
+  .track{position:absolute;left:0;right:0;height:3px;background:rgba(255,255,255,.5);filter:blur(1px);z-index:3;animation:tk 7s linear infinite}
+  @keyframes tk{0%{top:10%}100%{top:96%}}
+  .panel{background:#15130f;border-top:1px solid rgba(255,255,255,.1);padding:18px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 28px}
+  .ctrl{display:flex;flex-direction:column;gap:6px}
+  label{font-family:'DM Mono',monospace;font-size:12px;color:#c9c2b6;display:flex;justify-content:space-between}
+  input[type=range]{width:100%;accent-color:#EF9F27}
+</style>
+</head>
+<body>
+  <div class="screen" id="screen">
+    <div class="foot"></div>
+    <div class="big">ARCHIVE</div>
+    <div class="track"></div>
+    <div class="scan"></div>
+    <svg class="grain" xmlns="http://www.w3.org/2000/svg"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>
+  </div>
+  <div class="panel">
+    <div class="ctrl"><label>Grain <span id="vGrain">0.50</span></label><input type="range" min="0" max="1" step="0.05" value="0.5" data-var="--grain" data-out="vGrain"></div>
+    <div class="ctrl"><label>Aberration <span id="vAberr">2 px</span></label><input type="range" min="0" max="6" step="0.5" value="2" data-var="--aberr" data-unit="px" data-out="vAberr"></div>
+    <div class="ctrl"><label>Scanlines <span id="vScan">0.28</span></label><input type="range" min="0" max="0.6" step="0.02" value="0.28" data-var="--scan" data-out="vScan"></div>
+    <div class="ctrl"><label>Saturation footage <span id="vSat">0.50</span></label><input type="range" min="0" max="1.2" step="0.05" value="0.5" data-var="--sat" data-out="vSat"></div>
+  </div>
+  <script>
+    var root=document.documentElement;
+    document.querySelectorAll('input[type=range]').forEach(function(s){
+      s.addEventListener('input',function(){
+        var unit=s.dataset.unit||'';
+        root.style.setProperty(s.dataset.var, s.value+unit);
+        var out=document.getElementById(s.dataset.out);
+        out.textContent = unit ? s.value+' '+unit : Number(s.value).toFixed(2);
+      });
+    });
+  </script>
+</body>
+</html>

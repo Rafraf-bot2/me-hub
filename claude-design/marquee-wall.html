@@ -1,0 +1,31 @@
+<!-- @dsCard group="Hub — freshman.tv" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mur de banderoles — typo & mouvement isolés</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&display=swap">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0a0a10;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;justify-content:center;gap:0}
+  .mq{overflow:hidden;white-space:nowrap;line-height:1}
+  .mq:hover .tr{animation-play-state:paused}
+  .tr{display:inline-block;will-change:transform}
+  .L{animation:goL var(--d) linear infinite}.R{animation:goR var(--d) linear infinite}
+  @keyframes goL{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes goR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+  .w{font-family:'Anton',sans-serif;font-size:13vh;color:#f3ede2;padding:0 2vw;cursor:pointer;text-decoration:none}
+  .w:hover{color:#EF9F27}
+  .o{font-family:'Anton',sans-serif;font-size:13vh;color:transparent;-webkit-text-stroke:.25vh #f3ede2;padding:0 2vw;cursor:pointer;text-decoration:none}
+  .o:hover{-webkit-text-stroke-color:#EF9F27}
+  .sp{font-family:'Anton',sans-serif;font-size:8vh;color:#6a6a74;vertical-align:1.5vh;padding:0 .5vw}
+</style>
+</head>
+<body>
+  <div class="mq"><div class="tr L" style="--d:20s"><a class="w" href="#">CINÉ</a><span class="sp">&#10034;</span><a class="w" href="#">TECH</a><span class="sp">&#10034;</span><a class="w" href="#">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="#">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="#">CINÉ</a><span class="sp">&#10034;</span><a class="w" href="#">TECH</a><span class="sp">&#10034;</span><a class="w" href="#">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="#">ABOUT</a><span class="sp">&#10034;</span></div></div>
+  <div class="mq"><div class="tr R" style="--d:26s"><a class="o" href="#">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="#">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="#">CINÉ</a><span class="sp">&#10022;</span><a class="o" href="#">TECH</a><span class="sp">&#10022;</span><a class="o" href="#">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="#">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="#">CINÉ</a><span class="sp">&#10022;</span><a class="o" href="#">TECH</a><span class="sp">&#10022;</span></div></div>
+  <div class="mq"><div class="tr L" style="--d:30s"><a class="w" href="#">TECH</a><span class="sp">&#10034;</span><a class="w" href="#">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="#">CINÉ</a><span class="sp">&#10034;</span><a class="w" href="#">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="#">TECH</a><span class="sp">&#10034;</span><a class="w" href="#">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="#">CINÉ</a><span class="sp">&#10034;</span><a class="w" href="#">DESSINS</a><span class="sp">&#10034;</span></div></div>
+  <div class="mq"><div class="tr R" style="--d:23s"><a class="o" href="#">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="#">CINÉ</a><span class="sp">&#10022;</span><a class="o" href="#">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="#">TECH</a><span class="sp">&#10022;</span><a class="o" href="#">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="#">CINÉ</a><span class="sp">&#10022;</span><a class="o" href="#">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="#">TECH</a><span class="sp">&#10022;</span></div></div>
+</body>
+</html>

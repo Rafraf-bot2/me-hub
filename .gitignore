@@ -1,0 +1,23 @@
+# build & deps
+node_modules/
+dist/
+.astro/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# os
+.DS_Store
+
+# sources lourdes (hors repo : Cloudflare build n'en a pas besoin)
+raw-media/
+*.kra
+*.zip
+
+# exports d'art au root (sources, pas servis par le site)
+/ai.png
+/cinoche.png
+/dro.png
+/techo.png

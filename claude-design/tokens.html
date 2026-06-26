@@ -1,0 +1,57 @@
+<!-- @dsCard group="Hub — freshman.tv" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokens — palette, typo, doodles</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono&family=Inter:wght@400;500&display=swap">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0c0b0a;color:#f3ede2;font-family:'Inter',system-ui,sans-serif;padding:40px;line-height:1.5}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:#9b948a;font-weight:500;margin:0 0 16px}
+  section{margin-bottom:44px}
+  .swatches{display:flex;gap:14px;flex-wrap:wrap}
+  .sw{width:96px}
+  .chip{height:72px;border-radius:8px;border:1px solid rgba(255,255,255,.12)}
+  .sw p{font-family:'DM Mono',monospace;font-size:12px;margin-top:8px;color:#c9c2b6}
+  .sw span{font-size:11px;color:#7d766c}
+  .type div{margin-bottom:18px}
+  .disp{font-family:'Anton',sans-serif;font-size:64px;line-height:1;letter-spacing:-1px}
+  .sans{font-family:'Inter',sans-serif;font-size:28px;font-weight:500;letter-spacing:-.5px}
+  .mono{font-family:'DM Mono',monospace;font-size:16px;color:#c9c2b6}
+  .lbl{font-family:'DM Mono',monospace;font-size:11px;color:#7d766c;display:block;margin-bottom:4px}
+  .doodles{display:flex;gap:28px;align-items:center}
+</style>
+</head>
+<body>
+  <section>
+    <h2>Palette — UI mono, couleur réservée aux doodles</h2>
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0c0b0a"></div><p>#0C0B0A</p><span>encre / fond</span></div>
+      <div class="sw"><div class="chip" style="background:#f3ede2"></div><p>#F3EDE2</p><span>paper / texte</span></div>
+      <div class="sw"><div class="chip" style="background:#EF9F27"></div><p>#EF9F27</p><span>ocre / actif</span></div>
+      <div class="sw"><div class="chip" style="background:#1D9E75"></div><p>#1D9E75</p><span>vert doodle</span></div>
+      <div class="sw"><div class="chip" style="background:#D4537E"></div><p>#D4537E</p><span>rose doodle</span></div>
+      <div class="sw"><div class="chip" style="background:#E24B4A"></div><p>#E24B4A</p><span>rouge doodle</span></div>
+    </div>
+  </section>
+
+  <section class="type">
+    <h2>Typographie</h2>
+    <div><span class="lbl">Display — Anton (banderole, wordmark)</span><div class="disp">CINÉ TECH DESSINS</div></div>
+    <div><span class="lbl">Sans — Inter 500 (UI, microcopie)</span><div class="sans">mes mondes, mes obsessions</div></div>
+    <div><span class="lbl">Mono — DM Mono (HUD, timestamps)</span><div class="mono">SP &#9655; 0:00:14 &nbsp; JUN 16 2026</div></div>
+  </section>
+
+  <section>
+    <h2>Doodles séparateurs (placeholders &rarr; ta tablette)</h2>
+    <div class="doodles">
+      <svg width="70" height="60" viewBox="0 0 70 60"><g stroke="#EF9F27" stroke-width="5" fill="none" stroke-linecap="round"><path d="M8 30 q15 -22 30 0 q15 22 30 0"/></g></svg>
+      <svg width="60" height="60" viewBox="0 0 60 60"><g stroke="#1D9E75" stroke-width="5" fill="none" stroke-linecap="round"><circle cx="30" cy="30" r="20"/><path d="M22 28 q8 11 16 0"/></g></svg>
+      <svg width="60" height="60" viewBox="0 0 60 60"><g stroke="#D4537E" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M30 8 l18 40 l-18 -12 l-18 12 z"/></g></svg>
+      <svg width="60" height="60" viewBox="0 0 60 60"><g stroke="#E24B4A" stroke-width="5" fill="none" stroke-linecap="round"><path d="M12 30 h36 M30 12 v36"/></g></svg>
+    </div>
+  </section>
+</body>
+</html>

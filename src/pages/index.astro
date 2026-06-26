@@ -1,0 +1,563 @@
+---
+// Hub — "freshman.tv" found-footage marquee (V1: the hub alone).
+// Layout: a big centred title + handwritten phrase over the live footage, with a
+// single word-ticker scrolling along a dotted film-strip at the bottom. The
+// camcorder HUD (REC, timecode, SON) and the "RAF" watermark were dropped for a
+// cleaner stage. Footage is a sharp 1080p montage of the author's own clips
+// (rebuilt from raw-media → public/assets/footage.mp4) shown in natural colour.
+// Every knob (grain, saturation, scanlines, glitch…) is a CSS variable in :root.
+
+const worlds = [
+  { href: '/cine', label: 'CINÉ', soft: 'Ciné' },
+  { href: '/tech', label: 'TECH', soft: 'Tech' },
+  { href: '/dessins', label: 'DESSINS', soft: 'Dessins' },
+  { href: '/about', label: 'ABOUT', soft: 'About' },
+];
+
+// The single bottom ticker row: which words, direction, duration.
+// The marquee is seamless only if ONE block of words is already wider than the
+// viewport (translateX(-50%) leaves a gap otherwise). Font size is vh-based, so
+// on a wide-but-short screen (ultrawide) 4 words don't fill the width — repeat
+// the list REPS times to always overflow, even at ~4:1 aspect ratios.
+const REPS = 4;
+const fill = (words: typeof worlds) => Array.from({ length: REPS }).flatMap(() => words);
+
+// One animation cycle scrolls a full block width, so the duration must scale with
+// REPS to keep a constant visual speed (a 4× wider block needs 4× the time).
+const rows = [
+  { cls: 'r1', dir: 'L', dur: `${20 * REPS}s`, top: '88%', words: worlds, soft: false },
+];
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>rafraf — hub</title>
+    <meta name="description" content="Portail personnel de rafraf — ciné, tech, dessins." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@600;700&family=Shantell+Sans:wght@600;700&family=DM+Mono&family=Inter:wght@400;500&display=swap"
+    />
+  </head>
+  <body>
+    <h1 class="sr-only">rafraf — hub</h1>
+    <nav class="sr-only" aria-label="Mondes">
+      {worlds.map((w) => <a href={w.href}>{w.label}</a>)}
+    </nav>
+
+    <div class="stage" id="stage">
+      <div class="foot-fallback"></div>
+      <video class="foot" id="vid" autoplay muted loop playsinline preload="auto" aria-hidden="true">
+        <source src="/assets/footage.mp4" type="video/mp4" />
+      </video>
+
+      <!-- centre stage: big title + handwritten phrase -->
+      <div class="hero">
+        <div class="hero-title">rafraf</div>
+        <div class="hero-phrase">tout ce que je bricole, au même endroit</div>
+      </div>
+
+<!-- 3 of the author's doodles scrawled loosely into the page -->
+      <img class="scrawl" src="/assets/dro.png" alt="" aria-hidden="true" style="top:11%;left:41%;width:13vh;transform:rotate(-11deg)" />
+      <img class="scrawl" src="/assets/cinoche.png" alt="" aria-hidden="true" style="bottom:6%;left:13%;width:15vh;transform:rotate(8deg)" />
+      <img class="scrawl" src="/assets/animia.gif" alt="" aria-hidden="true" style="top:5%;left:60%;width:42vh;transform:rotate(-7deg);opacity:.65" />
+      <img class="scrawl" src="/assets/sisyphus.gif" alt="" aria-hidden="true" style="bottom:1%;left:68%;width:42vh;transform:rotate(6deg);opacity:.65" />
+      <img class="scrawl" src="/assets/thinking.gif" alt="" aria-hidden="true" style="top:8%;left:3%;width:42vh;transform:rotate(-4deg);opacity:.65" />
+
+      <!-- dotted film-strip rules framing the bottom ticker -->
+      <div class="rule" style="top:82%"></div>
+      <div class="rule" style="top:93%"></div>
+
+      {
+        rows.map((row) => (
+          <div class={`mq ${row.cls}`} style={`top:${row.top}`}>
+            <div class={`tr ${row.dir}`} style={`--d:${row.dur}`}>
+              <span class="set">
+                {fill(row.words).map((w) => (
+                  <>
+                    <a class="w" href={w.href}>{row.soft ? w.soft : w.label}</a>
+                    <span class="sp"></span>
+                  </>
+                ))}
+              </span>
+              <span class="set" aria-hidden="true">
+                {fill(row.words).map((w) => (
+                  <>
+                    <a class="w" href={w.href} tabindex="-1">{row.soft ? w.soft : w.label}</a>
+                    <span class="sp"></span>
+                  </>
+                ))}
+              </span>
+            </div>
+          </div>
+        ))
+      }
+
+      <div class="scan"></div>
+      <svg class="grain" xmlns="http://www.w3.org/2000/svg">
+        <filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch" /></filter>
+        <rect width="100%" height="100%" filter="url(#g)" />
+      </svg>
+    </div>
+
+    <div class="wipe" id="wipe" aria-hidden="true"></div>
+    <div class="cue" id="cue" aria-hidden="true">clique</div>
+
+    <style is:global>
+      :root {
+        --ink: #0c0b0a;
+        --paper: #f3ede2;
+        --ocre: #ef9f27;
+        --vert: #1d9e75;
+        --rose: #d4537e;
+        --rouge: #e24b4a;
+        --mono: 'DM Mono', monospace;
+        --sans: 'Inter', system-ui, sans-serif;
+        --display: 'Anton', sans-serif;
+        --grotesk: 'Space Grotesk', sans-serif;
+        --script: 'Perso1', 'Shantell Sans', cursive;
+
+        /* Look — frozen to the design session's final tuned values. */
+        --grain: 0.55; /* grain dialed back (sharper image) */
+        --aberr: 0px; /* chromatic aberration off */
+        --scan: 0; /* scanlines off */
+        --sat: 1; /* footage in natural colour */
+        --speed: 1;
+        --active: var(--vert); /* active/hover color = green */
+
+        /* the author's 4 drawings, looped per separator */
+        --d1: url('/assets/cinoche.png');
+        --d2: url('/assets/techo.png');
+        --d3: url('/assets/dro.png');
+        --d4: url('/assets/ai.png');
+      }
+
+      /* The author's own handwriting (Calligraphr export) = the signature row. */
+      @font-face {
+        font-family: 'Perso1';
+        src: url('/fonts/Perso1-Regular.ttf') format('truetype');
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; }
+      body { background: var(--ink); overflow: hidden; font-family: var(--sans); }
+      .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+      .stage { position: fixed; inset: 0; overflow: hidden; backface-visibility: hidden; }
+      .foot, .foot-fallback { position: absolute; inset: 0; filter: saturate(var(--sat)) contrast(1.08); }
+      .foot-fallback { z-index: 0; background: linear-gradient(115deg, #2a2420 0%, #0c0b0a 45%, #161a1c 100%); }
+      .foot { z-index: 1; width: 100%; height: 100%; object-fit: cover; }
+
+      .mq { position: absolute; left: 0; width: 100%; overflow: hidden; white-space: nowrap; line-height: 1; z-index: 2; transform: translateY(-50%); }
+      .r1 .sp { width: 6vh; height: 6vh; top: -0.5vh; }
+      .mq:hover .tr, .mq:focus-within .tr { animation-play-state: paused; }
+      .tr { display: inline-block; will-change: transform; animation-duration: calc(var(--d) * var(--speed)); animation-timing-function: linear; animation-iteration-count: infinite; }
+      .L { animation-name: goL; }
+      .R { animation-name: goR; }
+      .set { display: inline-block; }
+      @keyframes goL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+      @keyframes goR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+
+      .w {
+        color: #fff;
+        padding: 0 2.2vw;
+        cursor: pointer;
+        text-decoration: none;
+        text-shadow: var(--aberr) 0 rgba(255, 30, 90, 0.55), calc(var(--aberr) * -1) 0 rgba(0, 225, 235, 0.5);
+      }
+      .r1 .w { font-family: var(--display); font-weight: 400; font-size: 6vh; text-transform: uppercase; letter-spacing: 0.3px; }
+
+      /* centre hero — big title + handwritten phrase */
+      .hero { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5vh; text-align: center; pointer-events: none; }
+      .hero-title { font-family: var(--grotesk); font-weight: 700; font-size: 17vh; line-height: 0.9; color: #fff; letter-spacing: -0.6vh; }
+      .hero-phrase { font-family: var(--script); font-size: 6vh; line-height: 1; color: var(--vert); transform: rotate(-2.5deg); text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5); }
+      /* plain hover: no colour change — a hand-drawn scribble is traced over the
+         word instead (see the .scrib runtime below). just drop the chromatic ghost. */
+      .w:hover { text-shadow: none; }
+      .w:focus-visible { color: var(--active); text-shadow: none; outline: 2px solid var(--active); outline-offset: 6px; border-radius: 2px; }
+
+      /* the hover scribble — a fixed SVG laid over the hovered word, drawn on with
+         a stroke-dashoffset sweep. one of several hand-drawn variants, random each time. */
+      .scrib { position: fixed; z-index: 6; pointer-events: none; overflow: visible; opacity: 1; transition: opacity .18s ease; transform-origin: center; }
+      .scrib.out { opacity: 0; }
+      /* drawn on, held, then erased — loops back and forth while hovered */
+      .scrib path { fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: scribDraw 1.4s cubic-bezier(.45, 0, .3, 1) 1 forwards; }
+      @keyframes scribDraw {
+        0% { stroke-dashoffset: 1; }
+        42% { stroke-dashoffset: 0; }
+        60% { stroke-dashoffset: 0; }
+        100% { stroke-dashoffset: 1; }
+      }
+
+      /* "clique" cue trailing the cursor over a hovered word (freshman.tv) */
+      .cue { position: fixed; left: 0; top: 0; z-index: 7; pointer-events: none; font-family: var(--script); color: var(--vert); font-size: 4.6vh; line-height: 1; white-space: nowrap; opacity: 0; transform: translate(-50%, -135%) rotate(-6deg); text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5); transition: opacity .14s ease; }
+      .cue.on { opacity: 1; }
+
+      /* word separator = the author's 4 drawings on a fast psychedelic flip loop */
+      .sp {
+        display: inline-block; width: 8.5vh; height: 8.5vh; vertical-align: middle; position: relative; top: -1vh; margin: 0 0.35vw; font-size: 0;
+        background: center / contain no-repeat var(--d1);
+        animation: flip calc(0.8s * var(--speed)) steps(1, end) infinite;
+      }
+      .sp:nth-of-type(4n + 2) { animation-delay: calc(-0.2s * var(--speed)); }
+      .sp:nth-of-type(4n + 3) { animation-delay: calc(-0.4s * var(--speed)); }
+      .sp:nth-of-type(4n + 4) { animation-delay: calc(-0.6s * var(--speed)); }
+      @keyframes flip {
+        0%, 24% { background-image: var(--d1); }
+        25%, 49% { background-image: var(--d2); }
+        50%, 74% { background-image: var(--d3); }
+        75%, 99% { background-image: var(--d4); }
+        100% { background-image: var(--d1); }
+      }
+
+      /* dotted film-strip rule between the rows */
+      .rule { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed rgba(255, 255, 255, 0.5); z-index: 2; pointer-events: none; }
+      /* doodles scrawled into the page */
+      .scrawl { position: absolute; z-index: 1; pointer-events: none; opacity: 0.55; filter: drop-shadow(0 2px 7px rgba(0, 0, 0, 0.45)); }
+
+      /* ambient tracking glitch */
+      .stage.glitching { animation: gJump 0.14s steps(2, end); }
+      @keyframes gJump { 0% { transform: translateX(0); } 50% { transform: translateX(-5px); } 100% { transform: translateX(3px); } }
+      .stage.glitching .w { text-shadow: 5px 0 rgba(255, 30, 90, 0.7), -5px 0 rgba(0, 225, 235, 0.65); }
+      .stage.glitching .scan { opacity: 0.7; }
+      /* hard channel-change cut (click transition) */
+      .stage.glitch-hard { animation: glitchHard 0.62s steps(2, end); }
+      @keyframes glitchHard {
+        0% { transform: translate(0); filter: none; }
+        12% { transform: translate(-9px, 3px); filter: contrast(1.5) hue-rotate(10deg); }
+        24% { transform: translate(11px, -4px); }
+        30% { filter: invert(1) brightness(1.5); }
+        33% { filter: none; }
+        48% { transform: translate(-13px, 5px) skewX(3deg); }
+        62% { transform: translate(8px, -3px); }
+        70% { filter: invert(1); }
+        73% { filter: none; }
+        100% { transform: translate(0); filter: none; }
+      }
+
+      .scan { position: absolute; inset: 0; z-index: 3; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, var(--scan)) 0, rgba(0, 0, 0, var(--scan)) 1px, transparent 2px, transparent 4px); }
+      .grain { position: absolute; inset: 0; z-index: 4; opacity: var(--grain); mix-blend-mode: overlay; pointer-events: none; }
+
+      /* click-to-enter wipe overlay */
+      .wipe { position: fixed; inset: 0; z-index: 20; display: none; pointer-events: none; will-change: clip-path; }
+
+      @media (prefers-reduced-motion: reduce) {
+        .tr { animation: none !important; transform: translateX(0) !important; }
+        .sp { animation: none !important; background-image: var(--d1); }
+        .stage, .stage.glitching, .stage.glitch-hard { animation: none !important; }
+        .scrib path { transition: none !important; animation: none !important; stroke-dashoffset: 0 !important; }
+        .cue { transition: none !important; }
+      }
+    </style>
+
+    <script>
+      /* ───────────── Hub runtime (vanilla — no framework) ───────────── */
+      const stage = document.getElementById('stage')!;
+      const wipe = document.getElementById('wipe') as HTMLElement;
+      const vid = document.getElementById('vid') as HTMLVideoElement;
+      const reduce = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      /* video fallback → reveal gradient if footage missing */
+      vid.addEventListener('error', () => { vid.style.display = 'none'; });
+
+      /* ambient tracking glitch scheduler. Off by default (the session's final
+         setting); flip data-glitch on <body> to 'rare' | 'occ' | 'freq' to enable. */
+      let glitchTimer: ReturnType<typeof setTimeout>;
+      function scheduleGlitch() {
+        clearTimeout(glitchTimer);
+        const freq = document.body.dataset.glitch || 'off';
+        if (freq === 'off' || reduce()) return;
+        const ranges: Record<string, [number, number]> = { rare: [7000, 15000], occ: [3500, 7000], freq: [1200, 3500] };
+        const r = ranges[freq] || ranges.rare;
+        const wait = r[0] + Math.random() * (r[1] - r[0]);
+        glitchTimer = setTimeout(() => {
+          stage.classList.add('glitching');
+          setTimeout(() => stage.classList.remove('glitching'), 130 + Math.random() * 120);
+          scheduleGlitch();
+        }, wait);
+      }
+
+      /* ── click-to-enter transitions ──────────────────────────────── */
+      const accentByWorld: Record<string, string> = { '/cine': '#E24B4A', '/tech': '#1D9E75', '/dessins': '#D4537E', '/about': '#EF9F27' };
+      let busy = false;
+
+      /* Once the world routes exist, swap the demo reverse for real navigation:
+           function enter(href: string) { window.location.href = href; }
+         For V1 (hub only) the transition plays and reverses in place so there
+         are no dead links. */
+      function enter(_href?: string) {}
+
+      function inkOrDoodle(mode: string, x: number, y: number, accent: string, done: () => void) {
+        const rad = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) * 1.12;
+        wipe.style.transition = 'none';
+        wipe.style.background = mode === 'doodle' ? accent : 'var(--ink)';
+        wipe.style.clipPath = `circle(0px at ${x}px ${y}px)`;
+        wipe.style.display = 'block';
+        requestAnimationFrame(() => {
+          wipe.style.transition = 'clip-path .55s cubic-bezier(.7,0,.3,1)';
+          wipe.style.clipPath = `circle(${rad}px at ${x}px ${y}px)`;
+        });
+        setTimeout(() => {
+          enter();
+          wipe.style.transition = 'clip-path .5s cubic-bezier(.7,0,.3,1)';
+          wipe.style.clipPath = `circle(0px at ${x}px ${y}px)`;
+          setTimeout(() => { wipe.style.display = 'none'; done(); }, 520);
+        }, 720);
+      }
+
+      function zoomT(x: number, y: number, done: () => void) {
+        stage.style.transformOrigin = `${x}px ${y}px`;
+        stage.style.transition = 'transform .6s cubic-bezier(.7,0,.3,1), opacity .6s ease';
+        stage.style.transform = 'scale(7)';
+        stage.style.opacity = '0';
+        setTimeout(() => {
+          enter();
+          stage.style.transition = 'transform .55s cubic-bezier(.7,0,.3,1), opacity .55s ease';
+          stage.style.transform = 'scale(1)';
+          stage.style.opacity = '1';
+          setTimeout(() => { stage.style.transition = ''; stage.style.transformOrigin = ''; done(); }, 580);
+        }, 700);
+      }
+
+      function glitchT(done: () => void) {
+        stage.classList.add('glitch-hard');
+        setTimeout(() => { enter(); stage.classList.remove('glitch-hard'); done(); }, 640);
+      }
+
+      /* psychedelic VHS storm: a rapid, disordered channel-surf — fullscreen flashes
+         of the author's doodles, colour fields, blend-modes, hue spins and glitch
+         jumps strobing every ~70ms, then a clean cut to reveal. Same restless energy
+         as the flipping separators + the REC footage. */
+      const STORM_IMGS = ['var(--d1)', 'var(--d2)', 'var(--d3)', 'var(--d4)'];
+      // monochrome B&W palette + green as the single accent (no garish hues)
+      const STORM_COLS = ['var(--ink)', 'var(--paper)', '#1a1714', '#cfc7b8', '#0c0b0a', 'var(--vert)'];
+      const STORM_BLEND = ['difference', 'exclusion', 'screen', 'hard-light', 'normal', 'multiply'];
+
+      function stormT(done: () => void) {
+        const jr = (a: number, b: number) => a + Math.random() * (b - a);
+        const pick = <T,>(a: T[]) => a[Math.floor(Math.random() * a.length)];
+
+        const overlay = document.createElement('div');
+        Object.assign(overlay.style, { position: 'fixed', inset: '0', zIndex: '20', pointerEvents: 'none', overflow: 'hidden', background: 'transparent' });
+        const inner = document.createElement('div');
+        // oversized so random scale/rotate never shows an edge
+        Object.assign(inner.style, { position: 'absolute', left: '-30%', top: '-30%', width: '160%', height: '160%', willChange: 'transform, filter' });
+        overlay.appendChild(inner);
+        document.body.appendChild(overlay);
+
+        stage.classList.add('glitch-hard');                // jolt the page underneath too
+
+        let n = 0;
+        const frames = 11;
+        const id = setInterval(() => {
+          n++;
+          if (Math.random() < 0.6) {                       // a doodle stamped on a colour field
+            inner.style.background = `${pick(STORM_IMGS)} center / ${jr(35, 110).toFixed(0)}% no-repeat ${pick(STORM_COLS)}`;
+          } else {                                          // raw colour flash
+            inner.style.background = pick(STORM_COLS);
+          }
+          inner.style.transform = `scale(${jr(0.7, 1.8).toFixed(2)}) rotate(${jr(-28, 28).toFixed(0)}deg) translate(${jr(-12, 12).toFixed(0)}%, ${jr(-12, 12).toFixed(0)}%)`;
+          inner.style.mixBlendMode = pick(STORM_BLEND);
+          // keep it B&W: contrast + grain-y grayscale, occasional negative flash. no hue spin.
+          inner.style.filter = `grayscale(${jr(0.4, 1).toFixed(2)}) contrast(${jr(1, 1.8).toFixed(1)})${Math.random() < 0.4 ? ' invert(1)' : ''}`;
+          if (n >= frames) {
+            clearInterval(id);
+            // clean opaque cut at the swap, then a quick fade reveals the page
+            inner.style.mixBlendMode = 'normal';
+            inner.style.filter = 'none';
+            inner.style.transform = 'none';
+            inner.style.background = 'var(--ink)';
+            enter();
+            stage.classList.remove('glitch-hard');
+            overlay.style.transition = 'opacity .2s ease';
+            requestAnimationFrame(() => { overlay.style.opacity = '0'; });
+            setTimeout(() => { overlay.remove(); done(); }, 220);
+          }
+        }, 68);
+      }
+
+      function play(mode: string, x: number, y: number, accent: string) {
+        if (busy) return;
+        busy = true;
+        const finish = () => { busy = false; };
+        if (reduce()) { finish(); return; }
+        if (mode === 'zoom') return zoomT(x, y, finish);
+        if (mode === 'glitch') return glitchT(finish);
+        if (mode === 'storm') return stormT(finish);
+        inkOrDoodle(mode, x, y, accent, finish);
+      }
+
+      stage.addEventListener('click', (e) => {
+        const a = (e.target as HTMLElement).closest('a.w');
+        if (!a) return;
+        e.preventDefault();
+        const href = a.getAttribute('href')!;
+        const mode = document.body.dataset.transition || 'doodle';
+        play(mode, (e as MouseEvent).clientX, (e as MouseEvent).clientY, accentByWorld[href] || '#EF9F27');
+      });
+
+      /* keyboard activation (Enter on a focused entry) routes through the same wipe */
+      stage.addEventListener('keydown', (e) => {
+        if ((e as KeyboardEvent).key !== 'Enter') return;
+        const a = (e.target as HTMLElement).closest('a.w');
+        if (!a) return;
+        e.preventDefault();
+        const r = a.getBoundingClientRect();
+        const href = a.getAttribute('href')!;
+        const mode = document.body.dataset.transition || 'doodle';
+        play(mode, r.left + r.width / 2, r.top + r.height / 2, accentByWorld[href] || '#EF9F27');
+      });
+
+      /* ── hover scribble (freshman.tv-style) ──────────────────────────
+         On hover, a hand-drawn doodle is traced over the word instead of a
+         colour change. A random variant + random palette colour each time, so
+         the same word never scribbles the same way twice. */
+      const SCRIB_PALETTE = ['#1d9e75'];
+      const SVGNS = 'http://www.w3.org/2000/svg';
+      const scribMap = new WeakMap<Element, SVGSVGElement>();
+      const rnd = (a: number, b: number) => a + Math.random() * (b - a);
+
+      /* d-string from a list of [x,y] points */
+      const poly = (pts: number[][]) =>
+        'M' + pts.map((p, i) => (i ? 'L' : '') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
+
+      type Box = { x: number; y: number; w: number; h: number };
+
+      /* each variant returns one or more loose, scrawled path d-strings inside
+         the box — deliberately messy ("gribouillis"), thin pen strokes. */
+      const VARIANTS: Array<(b: Box) => string[]> = [
+        // tangled scrawl — a connected random walk dragged across the word
+        (b) => {
+          const x0 = b.x - 8, x1 = b.x + b.w + 8, midY = b.y + b.h / 2, amp = b.h * 0.62;
+          const steps = Math.max(22, Math.round(b.w / 10));
+          let x = x0;
+          const pts = [[x, midY + rnd(-amp, amp)]];
+          for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            x += ((x1 - x0) / steps) * rnd(0.25, 1.7) * (Math.random() < 0.16 ? -0.7 : 1);
+            x = Math.max(x0 - 8, Math.min(x1 + 8, x));
+            pts.push([x, midY + Math.sin(t * Math.PI * rnd(5, 9)) * amp * rnd(0.55, 1) + rnd(-4, 4)]);
+          }
+          return [poly(pts)];
+        },
+        // loopy multi-loop circle — 2-3 wobbly overlapping turns
+        (b) => {
+          const cx = b.x + b.w / 2, cy = b.y + b.h / 2, rx = b.w / 2 + rnd(7, 15), ry = b.h / 2 + rnd(5, 11);
+          const start = rnd(0, 6), total = Math.PI * rnd(4.2, 6.2), steps = Math.max(60, Math.round(b.w / 5)), pts = [];
+          for (let i = 0; i <= steps; i++) {
+            const a = start + total * (i / steps), wob = 1 + Math.sin(a * rnd(1.5, 3)) * 0.12;
+            pts.push([cx + (rx * wob + rnd(-4, 4)) * Math.cos(a), cy + (ry * wob + rnd(-4, 4)) * Math.sin(a)]);
+          }
+          return [poly(pts)];
+        },
+        // curly underline with little loops
+        (b) => {
+          const y = b.y + b.h * 0.9, x0 = b.x - 6, x1 = b.x + b.w + 6;
+          const loops = Math.max(3, Math.round(b.w / 55)), per = 10, pts = [];
+          for (let i = 0; i <= loops * per; i++) {
+            const t = i / (loops * per), x = x0 + (x1 - x0) * t, a = t * loops * Math.PI * 2;
+            pts.push([x + Math.cos(a) * b.h * 0.06, y + Math.sin(a) * b.h * 0.13 + rnd(-2, 2)]);
+          }
+          return [poly(pts)];
+        },
+        // dense back-and-forth scratch fill (cross-out)
+        (b) => {
+          const n = Math.max(9, Math.round(b.w / 14)), pts = [];
+          for (let i = 0; i <= n; i++) pts.push([b.x - 4 + ((b.w + 8) * i) / n, b.y + (i % 2 ? b.h * 0.84 : b.h * 0.16) + rnd(-4, 4)]);
+          return [poly(pts)];
+        },
+        // spiral burst — scribble spiralling out from the centre
+        (b) => {
+          const cx = b.x + b.w / 2, cy = b.y + b.h / 2, turns = rnd(3, 4.5), steps = Math.max(50, Math.round(b.w / 6)), pts = [];
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps, a = t * turns * Math.PI * 2;
+            pts.push([cx + Math.cos(a) * (b.w / 2 + 6) * t + rnd(-3, 3), cy + Math.sin(a) * (b.h / 2 + 4) * t + rnd(-3, 3)]);
+          }
+          return [poly(pts)];
+        },
+        // two crossing scrawls
+        (b) => {
+          const mk = (down: boolean) => {
+            const n = Math.max(8, Math.round(b.w / 16)), pts = [];
+            for (let i = 0; i <= n; i++) { const t = i / n; pts.push([b.x - 5 + (b.w + 10) * t, b.y + (down ? t : 1 - t) * b.h + Math.sin(t * Math.PI * rnd(3, 6)) * b.h * 0.18 + rnd(-3, 3)]); }
+            return poly(pts);
+          };
+          return [mk(true), mk(false)];
+        },
+      ];
+
+      let lastVariant = -1;
+      function pickVariant() {
+        let i = Math.floor(Math.random() * VARIANTS.length);
+        if (i === lastVariant) i = (i + 1) % VARIANTS.length;
+        lastVariant = i;
+        return VARIANTS[i];
+      }
+
+      function scribbleOn(word: HTMLElement) {
+        if (scribMap.has(word)) return;
+        const r = word.getBoundingClientRect();
+        if (!r.width) return;
+        const pad = 16;
+        const W = r.width + pad * 2, H = r.height + pad * 2;
+        const svg = document.createElementNS(SVGNS, 'svg');
+        svg.setAttribute('class', 'scrib');
+        svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+        Object.assign(svg.style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${W}px`, height: `${H}px`, transform: `rotate(${rnd(-2.5, 2.5)}deg)` });
+
+        const box: Box = { x: pad, y: pad, w: r.width, h: r.height };
+        const color = SCRIB_PALETTE[Math.floor(Math.random() * SCRIB_PALETTE.length)];
+        // thin pen stroke
+        const sw = Math.max(1.6, Math.min(3.4, r.height * 0.028));
+        const draws = pickVariant()(box);
+        draws.forEach((d, i) => {
+          const p = document.createElementNS(SVGNS, 'path');
+          p.setAttribute('d', d);
+          p.setAttribute('stroke', color);
+          p.setAttribute('stroke-width', String(sw));
+          p.setAttribute('pathLength', '1');
+          // the draw / hold / erase loop lives in CSS (@keyframes scribDraw);
+          // stagger multi-stroke variants so they don't draw in lockstep.
+          if (!reduce()) p.style.animationDelay = `${i * 0.16}s`;
+          svg.appendChild(p);
+        });
+
+        document.body.appendChild(svg);
+        scribMap.set(word, svg);
+      }
+
+      function unscribble(word: HTMLElement) {
+        const svg = scribMap.get(word);
+        if (!svg) return;
+        scribMap.delete(word);
+        svg.classList.add('out');
+        setTimeout(() => svg.remove(), 220);
+      }
+
+      /* "clique" cue trails the cursor while a word is hovered */
+      const cue = document.getElementById('cue') as HTMLElement;
+      window.addEventListener('mousemove', (e) => {
+        cue.style.left = (e as MouseEvent).clientX + 'px';
+        cue.style.top = (e as MouseEvent).clientY + 'px';
+      }, { passive: true });
+
+      document.querySelectorAll<HTMLElement>('a.w').forEach((word) => {
+        word.addEventListener('mouseenter', () => { scribbleOn(word); cue.classList.add('on'); });
+        word.addEventListener('mouseleave', () => { unscribble(word); cue.classList.remove('on'); });
+        word.addEventListener('focus', () => scribbleOn(word));
+        word.addEventListener('blur', () => unscribble(word));
+      });
+
+      /* session's final picks: psychedelic VHS storm wipe, glitch off */
+      document.body.dataset.transition = 'storm';
+      document.body.dataset.glitch = 'off';
+      scheduleGlitch();
+    </script>
+  </body>
+</html>

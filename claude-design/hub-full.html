@@ -1,0 +1,84 @@
+<!-- @dsCard group="Hub — freshman.tv" -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hub — VHS marquee plein écran</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=DM+Mono:wght@400&family=Inter:wght@400;500&display=swap">
+<style>
+  :root{
+    --ink:#0c0b0a; --paper:#f3ede2; --ocre:#EF9F27; --vert:#1D9E75; --rose:#D4537E; --rouge:#E24B4A;
+    --mono:'DM Mono',monospace; --sans:'Inter',system-ui,sans-serif; --display:'Anton',sans-serif;
+    --grain:.5; --aberr:2px; --scan:.28;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--ink);overflow:hidden;font-family:var(--sans)}
+  .stage{position:fixed;inset:0;overflow:hidden}
+  .foot{position:absolute;inset:0;background:linear-gradient(115deg,#2a2420 0%,#0c0b0a 45%,#161a1c 100%);filter:saturate(.5) contrast(1.1)}
+  .band{position:absolute;left:0;right:0;height:9vh;background:rgba(255,255,255,.03)}
+  .wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:42vh;color:#fff;opacity:.04;letter-spacing:-1vh}
+  .mq{position:absolute;left:0;width:100%;overflow:hidden;white-space:nowrap;line-height:1;z-index:2}
+  .mq:hover .tr{animation-play-state:paused}
+  .tr{display:inline-block;will-change:transform}
+  .L{animation:goL var(--d) linear infinite}.R{animation:goR var(--d) linear infinite}
+  @keyframes goL{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @keyframes goR{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+  .w{font-family:var(--display);font-size:11vh;color:var(--paper);padding:0 2.5vw;cursor:pointer;text-decoration:none;
+     text-shadow:var(--aberr) 0 rgba(255,30,90,.55),calc(var(--aberr)*-1) 0 rgba(0,225,235,.5)}
+  .w:hover{color:var(--ocre);text-shadow:none}
+  .o{font-family:var(--display);font-size:11vh;color:transparent;-webkit-text-stroke:.22vh var(--paper);padding:0 2.5vw;cursor:pointer;text-decoration:none}
+  .o:hover{-webkit-text-stroke-color:var(--ocre)}
+  .sp{font-family:var(--display);font-size:7vh;color:#6a6358;vertical-align:1.2vh;padding:0 .6vw}
+  .scan{position:absolute;inset:0;z-index:3;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,var(--scan)) 0,rgba(0,0,0,var(--scan)) 1px,transparent 2px,transparent 4px)}
+  .track{position:absolute;left:0;right:0;height:3px;background:rgba(255,255,255,.5);filter:blur(1px);z-index:3;animation:tk 7s linear infinite}
+  @keyframes tk{0%{top:12%}100%{top:96%}}
+  .grain{position:absolute;inset:0;z-index:4;opacity:var(--grain);mix-blend-mode:overlay;pointer-events:none}
+  .hud{position:absolute;z-index:5;font-family:var(--mono);font-size:13px;color:var(--paper);text-shadow:0 0 3px rgba(0,0,0,.6)}
+  .mark{top:18px;left:24px;font-family:var(--sans);font-weight:500;font-size:18px;letter-spacing:-.5px}
+  .rec{top:18px;right:24px;color:#ff3b3b}
+  .tc{bottom:46px;left:24px}
+  .dt{bottom:20px;left:24px;color:#c9c2b6}
+  .snd{bottom:20px;right:24px;border:1px solid var(--paper);border-radius:4px;padding:5px 11px;font-size:11px;cursor:pointer}
+  .doodle{position:absolute;z-index:2;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="foot"></div>
+  <div class="band" style="top:24%"></div>
+  <div class="band" style="top:62%"></div>
+  <div class="wm">RAF</div>
+
+  <svg class="doodle" style="inset:0;width:100%;height:100%" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g stroke="#EF9F27" stroke-width="5" fill="none" stroke-linecap="round"><path d="M70 80 q18 -26 36 0 q18 26 36 0"/></g>
+    <g stroke="#1D9E75" stroke-width="5" fill="none" stroke-linecap="round"><circle cx="905" cy="120" r="22"/><path d="M896 118 q9 12 18 0"/></g>
+    <g stroke="#D4537E" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M60 520 l20 -34 l20 34 z"/></g>
+  </svg>
+
+  <div class="hud mark">rafraf &trade;</div>
+  <div class="hud rec">&#9679; REC</div>
+  <div class="hud tc">SP &nbsp; &#9655; &nbsp; 0:00:14</div>
+  <div class="hud dt">JUN 16 2026 &nbsp; rafraf-cam</div>
+  <div class="hud snd">son &#9679;</div>
+
+  <div class="mq" style="top:18%"><div class="tr L" style="--d:20s">
+    <a class="w" href="/cine">CIN&Eacute;</a><span class="sp">&#10034;</span><a class="w" href="/tech">TECH</a><span class="sp">&#10034;</span><a class="w" href="/dessins">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="/about">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="/cine">CIN&Eacute;</a><span class="sp">&#10034;</span><a class="w" href="/tech">TECH</a><span class="sp">&#10034;</span><a class="w" href="/dessins">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="/about">ABOUT</a><span class="sp">&#10034;</span>
+  </div></div>
+  <div class="mq" style="top:36%"><div class="tr R" style="--d:26s">
+    <a class="o" href="/dessins">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="/about">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="/cine">CIN&Eacute;</a><span class="sp">&#10022;</span><a class="o" href="/tech">TECH</a><span class="sp">&#10022;</span><a class="o" href="/dessins">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="/about">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="/cine">CIN&Eacute;</a><span class="sp">&#10022;</span><a class="o" href="/tech">TECH</a><span class="sp">&#10022;</span>
+  </div></div>
+  <div class="mq" style="top:54%"><div class="tr L" style="--d:30s">
+    <a class="w" href="/tech">TECH</a><span class="sp">&#10034;</span><a class="w" href="/about">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="/cine">CIN&Eacute;</a><span class="sp">&#10034;</span><a class="w" href="/dessins">DESSINS</a><span class="sp">&#10034;</span><a class="w" href="/tech">TECH</a><span class="sp">&#10034;</span><a class="w" href="/about">ABOUT</a><span class="sp">&#10034;</span><a class="w" href="/cine">CIN&Eacute;</a><span class="sp">&#10034;</span><a class="w" href="/dessins">DESSINS</a><span class="sp">&#10034;</span>
+  </div></div>
+  <div class="mq" style="top:72%"><div class="tr R" style="--d:23s">
+    <a class="o" href="/about">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="/cine">CIN&Eacute;</a><span class="sp">&#10022;</span><a class="o" href="/dessins">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="/tech">TECH</a><span class="sp">&#10022;</span><a class="o" href="/about">ABOUT</a><span class="sp">&#10022;</span><a class="o" href="/cine">CIN&Eacute;</a><span class="sp">&#10022;</span><a class="o" href="/dessins">DESSINS</a><span class="sp">&#10022;</span><a class="o" href="/tech">TECH</a><span class="sp">&#10022;</span>
+  </div></div>
+
+  <div class="track"></div>
+  <div class="scan"></div>
+  <svg class="grain" xmlns="http://www.w3.org/2000/svg"><filter id="g"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(#g)"/></svg>
+</div>
+</body>
+</html>
