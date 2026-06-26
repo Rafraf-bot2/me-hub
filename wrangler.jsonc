@@ -1,0 +1,10 @@
+{
+  // Déploiement Cloudflare Workers en mode "static assets" (site Astro statique).
+  // Le build (`npm run build`) génère ./dist, que Wrangler sert tel quel.
+  // Le jour où on veut du SSR : ajouter l'adaptateur @astrojs/cloudflare + un "main".
+  "name": "me-hub",
+  "compatibility_date": "2026-06-26",
+  "assets": {
+    "directory": "./dist"
+  }
+}
