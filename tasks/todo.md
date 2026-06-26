@@ -29,12 +29,13 @@ Identifiants Letterboxd : pseudo = `rafraf30`. Token TMDB déjà dans `.env` (gi
 
 ## Phase 0 — Repo Git + Hébergement Cloudflare
 
-- [ ] `git init` dans `/Users/rafraf/Documents/hustle/me` (le projet n'est PAS encore un repo git)
-- [ ] Vérifier `.gitignore` : `.env` doit être ignoré (déjà le cas), ajouter `node_modules/`, `dist/`, `.astro/`, `raw-media/`, `*.kra` si besoin (gros fichiers source). NE PAS committer `.env`.
-- [ ] Commit initial
-- [ ] Créer le repo GitHub (via `gh repo create`) + push
-- [ ] Créer un compte Cloudflare (auteur) → Cloudflare Pages → connecter le repo
-      - Build command : `npm run build` · Output dir : `dist` · Framework : Astro
+- [x] `git init` ✅ (2026-06-26, branche `main`)
+- [x] `.gitignore` durci : `node_modules/ dist/ .astro/ .env* raw-media/ *.kra *.zip` + exports png au root. `.env.example` ajouté (clés sans valeurs). `.env` confirmé hors repo.
+- [x] Commit initial (98e532c)
+- [x] Repo GitHub public + push ✅ → https://github.com/Rafraf-bot2/me-hub (compte `Rafraf-bot2`, protocole SSH). `.env` confirmé absent du distant.
+- [ ] Cloudflare Pages → connecter le repo `Rafraf-bot2/me-hub`
+      - Build command : `npm run build` · Output dir : `dist` · Framework preset : Astro
+      - ⚠️ Étape manuelle dashboard Cloudflare (en cours)
 - [ ] Vérifier 1er déploiement live OK (hub + /cine s'affichent)
 - [ ] (Plus tard) brancher domaine perso
 
