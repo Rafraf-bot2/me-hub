@@ -33,10 +33,12 @@ Identifiants Letterboxd : pseudo = `rafraf30`. Token TMDB déjà dans `.env` (gi
 - [x] `.gitignore` durci : `node_modules/ dist/ .astro/ .env* raw-media/ *.kra *.zip` + exports png au root. `.env.example` ajouté (clés sans valeurs). `.env` confirmé hors repo.
 - [x] Commit initial (98e532c)
 - [x] Repo GitHub public + push ✅ → https://github.com/Rafraf-bot2/me-hub (compte `Rafraf-bot2`, protocole SSH). `.env` confirmé absent du distant.
-- [ ] Cloudflare Pages → connecter le repo `Rafraf-bot2/me-hub`
-      - Build command : `npm run build` · Output dir : `dist` · Framework preset : Astro
-      - ⚠️ Étape manuelle dashboard Cloudflare (en cours)
-- [ ] Vérifier 1er déploiement live OK (hub + /cine s'affichent)
+- [x] Cloudflare **Workers** (pas Pages — nouveau flux unifié) connecté au repo ✅
+      - Config via `wrangler.jsonc` au root (static assets `./dist`, compat 2026-06-26).
+      - Build : `npm run build` · Deploy : `npx wrangler deploy`.
+      - ⚠️ 1er build a échoué (lockfile désync → `npm ci`) → corrigé via `npm install --package-lock-only` (commit 07a7899).
+- [x] 1er déploiement live OK ✅ → https://me-hub.raflamalice.workers.dev
+      - Hub : 200, contenu complet. `/cine` → 307 vers `/cine/` → 200, island R3F `client:only` + 33 films/132 frames sérialisés, URLs TMDB OK. Rendu WebGL à confirmer visuellement en navigateur.
 - [ ] (Plus tard) brancher domaine perso
 
 ## Phase 1 — Scrape authentifié (récupérer tous les films bien notés)
