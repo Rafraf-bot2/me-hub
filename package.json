@@ -16,5 +16,10 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.1"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
   }
 }

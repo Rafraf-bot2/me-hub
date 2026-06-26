@@ -3,15 +3,12 @@
 // Run: node --env-file=.env scripts/sync-cine.mjs
 
 import { writeFile } from 'node:fs/promises';
+import { openLb } from './lb-browser.mjs';
 
 const USER = 'rafraf30';
 const TOKEN = process.env.TMDB_READ_TOKEN;
-const FRAMES_PER_FILM = 4;
 const MIN_STARS = 4; // include films rated >= this (in addition to the lists)
 const IMG = (size, path) => `https://image.tmdb.org/t/p/${size}${path}`;
-const UA =
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 ' +
-  '(KHTML, like Gecko) Chrome/124.0 Safari/537.36';
 
 if (!TOKEN) {
   console.error('Missing TMDB_READ_TOKEN (run with: node --env-file=.env ...)');
@@ -20,13 +17,12 @@ if (!TOKEN) {
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function lbGet(path, cookie) {
+// All Letterboxd requests go through a shared stealth browser (see lb-browser.mjs)
+// — plain fetch gets randomly Cloudflare-challenged. Set in main().
+let lb = null;
+async function lbGet(path) {
   await sleep(280); // be gentle with Letterboxd
-  const headers = { 'User-Agent': UA, Accept: 'text/html', 'Accept-Language': 'en-US,en;q=0.9' };
-  if (cookie) headers.Cookie = cookie;
-  const res = await fetch(`https://letterboxd.com${path}`, { headers });
-  if (!res.ok) throw new Error(`LB ${res.status} on ${path}`);
-  return res.text();
+  return lb.get(path);
 }
 
 async function tmdb(path) {
@@ -73,19 +69,21 @@ async function getTmdb(filmSlug) {
   return id ? { id, type } : null;
 }
 
-// Ratings live in the public /films/ HTML as rated-N (/10 scale). NOTE: Letterboxd
-// hard-blocks deep pagination (/films/page/N/ → 403) and ?page= is ignored, so only
-// the first page (~72 most recent films) is reachable without an authenticated cookie.
-// Pass cookieHeader (a logged-in LB session) to unlock all pages.
-async function getRatings(cookie) {
+// Ratings live in the /films/ HTML as rated-N (/10 scale). Cloudflare hard-blocks
+// the plain /films/page/N/ path (403 "Just a moment…"), but the rating-sorted view
+// /films/by/entry-rating/page/N/ pages cleanly when authenticated — so we walk that
+// (films ordered high→low rating, with rated-N inline). Unauthenticated, only the
+// first page of /films/ (~72 recent films) is reachable.
+async function getRatings(authed) {
   const ratings = new Map(); // slug -> stars (0.5..5)
   const linkRe = new RegExp(`/${USER}/film/([a-z0-9-]+)/`);
-  for (let page = 1; page <= 30; page++) {
+  const base = authed ? `/${USER}/films/by/entry-rating/` : `/${USER}/films/`;
+  for (let page = 1; page <= 40; page++) {
     let html;
     try {
-      html = await lbGet(`/${USER}/films/${page > 1 ? `page/${page}/` : ''}`, cookie);
+      html = await lbGet(`${base}${page > 1 ? `page/${page}/` : ''}`);
     } catch {
-      break; // 403 on deep pages when unauthenticated — stop gracefully
+      break; // blocked/last page — stop gracefully
     }
     const segs = html.split('poster-viewingdata').slice(1);
     let found = 0;
@@ -96,8 +94,8 @@ async function getRatings(cookie) {
       const r = s.match(/rated-(\d+)/)?.[1];
       if (r) ratings.set(slug, +r / 2);
     }
-    if (found === 0) break; // past the last page
-    if (!cookie) break; // only page 1 is reachable without a session cookie
+    if (found < 20) break; // short page = last page (full pages hold ~72)
+    if (!authed) break; // only page 1 is reachable without a session cookie
   }
   return ratings;
 }
@@ -111,9 +109,15 @@ async function getRatings(cookie) {
 const STD_SIZES = [[3840, 2160], [1920, 1080], [2560, 1440], [1280, 720]];
 const isStdSize = (b) => STD_SIZES.some(([w, h]) => b.width === w && b.height === h);
 
+// Store ALL quality frames (not just the top 4): the gallery rotates which one it
+// shows by date (every 2 days, client-side — see CineSpace.jsx), so more frames =
+// longer before a film repeats. Cap to keep cine.json lean; films with fewer good
+// backdrops simply store fewer (that's all TMDB has for them).
+const MAX_FRAMES = 16;
+
 function pickFrames(backdrops) {
   const pool = backdrops.filter((b) => b.iso_639_1 === null && b.width >= 1280);
-  const src = pool.length >= FRAMES_PER_FILM ? pool : backdrops.filter((b) => b.iso_639_1 === null);
+  const src = pool.length ? pool : backdrops.filter((b) => b.iso_639_1 === null);
   const score = (b) =>
     (isStdSize(b) ? 0 : 2) // atypical resolution → likely a real screencap
     - Math.min(b.vote_count, 20) * 0.15 // many votes → curated promo/key art
@@ -122,7 +126,7 @@ function pickFrames(backdrops) {
   return src
     .map((b) => ({ b, s: score(b) }))
     .sort((a, b) => b.s - a.s)
-    .slice(0, FRAMES_PER_FILM)
+    .slice(0, MAX_FRAMES)
     .map(({ b }) => ({
       url: IMG('w1280', b.file_path),
       full: IMG('original', b.file_path),
@@ -151,7 +155,17 @@ async function enrich(tmdbId, type) {
 // --- main ---------------------------------------------------------------------
 
 async function main() {
-  console.log(`Scraping lists for @${USER} ...`);
+  // Open the shared stealth browser. With LB_COOKIE (a session captured from a real
+  // browser via scripts/lb-capture-cookie.mjs, or pasted manually) we're authenticated
+  // and can page through all rated films. Auto-login is impossible: Letterboxd sign-in
+  // is behind Cloudflare Turnstile, which blocks every automated browser (proven:
+  // headless, headed, and stealth all fail at submit). Browsing with an injected
+  // cookie never triggers Turnstile, so the cron scrapes unattended.
+  const cookie = process.env.LB_COOKIE;
+  lb = await openLb(cookie);
+  console.log(`Browser ready ${cookie ? '(authenticated via LB_COOKIE)' : '(no cookie — page 1 of ratings only)'}.`);
+
+  console.log(`\nScraping lists for @${USER} ...`);
   const listSlugs = await getLists();
   const lists = [];
   for (const slug of listSlugs) {
@@ -171,9 +185,8 @@ async function main() {
   }
 
   // add highly-rated films (and tag every film with its rating if known)
-  const cookie = process.env.LB_COOKIE; // optional logged-in session → unlocks all pages
-  console.log(`\nScraping ratings from /films/ ${cookie ? '(authenticated, all pages)' : '(page 1 only — no cookie)'} ...`);
-  const ratings = await getRatings(cookie);
+  console.log(`\nScraping ratings ${lb.authed ? '(authenticated, all pages by rating)' : '(page 1 only — no cookie)'} ...`);
+  const ratings = await getRatings(lb.authed);
   let added = 0;
   for (const [slug, stars] of ratings) {
     if (stars >= MIN_STARS && !filmMap.has(slug)) { filmMap.set(slug, { slug, lists: [] }); added++; }
@@ -207,4 +220,6 @@ async function main() {
   console.log(`\nWrote src/data/cine.json — ${films.length} films, ${films.reduce((n, f) => n + f.frames.length, 0)} frames.`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main()
+  .catch((e) => { console.error(e); process.exitCode = 1; })
+  .finally(() => lb?.close());

@@ -41,29 +41,45 @@ Identifiants Letterboxd : pseudo = `rafraf30`. Token TMDB déjà dans `.env` (gi
       - Hub : 200, contenu complet. `/cine` → 307 vers `/cine/` → 200, island R3F `client:only` + 33 films/132 frames sérialisés, URLs TMDB OK. Rendu WebGL à confirmer visuellement en navigateur.
 - [ ] (Plus tard) brancher domaine perso
 
-## Phase 1 — Scrape authentifié (récupérer tous les films bien notés)
+## Phase 1 — Scrape authentifié ✅ TERMINÉE (2026-06-27)
 
-- [ ] Ajouter Playwright : `npm i -D playwright` (+ `npx playwright install chromium`)
-- [ ] Nouveau module login : Playwright ouvre Letterboxd, se connecte (`LB_USER`/`LB_PASS`), récupère les cookies de session → réutilisés pour les requêtes scrape.
-      ⚠️ RISQUE À VÉRIFIER demain : captcha / 2FA au login. Si LB bloque le login headless → plan B = cookie de session manuel dans un secret (`LB_COOKIE`, déjà supporté par `sync-cine.mjs` ligne 174) à rafraîchir périodiquement.
-- [ ] Réécrire `getRatings()` dans `scripts/sync-cine.mjs` pour, **une fois authentifié**, scraper les buckets `/films/rated/...` page par page (toutes pages) → liste complète des films notés + leur note exacte. Garder le scrape des listes existant. Garder l'enrichissement TMDB + `pickFrames`.
-- [ ] Confirmer le seuil "bien notés" : `MIN_STARS` actuel = 4. **À valider avec l'auteur** : 4★ ou 4.5★ ? (impacte le nb de films dans la galerie)
-- [ ] Run local avec identifiants → régénérer `src/data/cine.json`. Vérifier que le nb de films grimpe nettement (actuellement 33 → all-time).
-- [ ] Vérifier perfs /cine avec plus de plans (espace = 1 frame/film ; bumpable mais surveiller la fluidité WebGL).
+**Résultat : galerie passée de 33 → 70 films (279 frames).** `src/data/cine.json` régénéré.
+Distribution : 40× 4★, 21× 4.5★, 4× 3.5★ (films de listes), 5 list-only. (1 perdu : `twin-peaks-the-return` = série TV, pas d'ID film TMDB.)
 
-## Phase 2 — Automatisation hebdo (GitHub Action)
+### Le gros enseignement : auto-login = IMPOSSIBLE (Cloudflare Turnstile)
+Le sign-in Letterboxd est derrière **Cloudflare Turnstile**. Prouvé qu'AUCUN navigateur piloté ne passe le submit :
+| Tentative | Résultat |
+|---|---|
+| Playwright headless vanilla | ❌ Turnstile, `login.do` jamais envoyé |
+| Playwright headed | ❌ Turnstile |
+| playwright-extra + stealth (`webdriver=false`) | ❌ Turnstile |
+| Login HUMAIN dans un navigateur piloté (capture-cookie) | ❌ "try another browser" au submit |
+➡️ `scripts/lb-login.mjs` et `scripts/lb-capture-cookie.mjs` **supprimés** (morts).
 
-- [ ] Secrets GitHub repo : `LB_USER`, `LB_PASS` (ou `LB_COOKIE` selon plan B), `TMDB_READ_TOKEN`
-- [ ] `.github/workflows/sync-cine.yml` :
-      - cron hebdo (ex. dimanche 04:00 UTC) + `workflow_dispatch` (run manuel)
-      - checkout → `npm ci` → `npx playwright install --with-deps chromium` → run `node scripts/sync-cine.mjs`
-      - commit `src/data/cine.json` SI changé → push
-- [ ] Le push sur main déclenche auto le rebuild Cloudflare Pages → site à jour
-- [ ] Tester l'Action en manuel (`workflow_dispatch`) → vérifier commit + redeploy
+### La solution qui marche : cookie d'un VRAI navigateur + scrape via navigateur stealth
+- **Auth** = cookie de session capturé **à la main** depuis le vrai Safari de l'auteur (DevTools → Réseau → en-tête `Cookie`), collé dans `.env` sous `LB_COOKIE`. (Turnstile ne garde QUE le login ; une session déjà valide navigue sans souci.)
+- **Scrape** = nouveau module `scripts/lb-browser.mjs` : **stealth Chromium** avec le cookie injecté. Raison : `fetch` Node se fait re-challenger par Cloudflare aléatoirement (cf_clearance lié à l'empreinte TLS du navigateur d'origine). Un vrai navigateur gagne sa propre clairance → pagine sans 403.
+- **getRatings** réécrit : walk `/films/by/entry-rating/page/N/` (triées par note, paginables en authentifié). Le chemin `/films/page/N/` est lui hard-bloqué par Cloudflare ("Just a moment…").
+- `MIN_STARS = 4★` (validé). Cleanup Phase 3 fait (scraper Python supprimé).
+- [ ] (optionnel) Perf /cine avec 70 plans vs 33 — à l'œil en navigateur (rendu R3F inchangé, données seules ont grossi). Build prod OK.
 
-## Phase 3 — Nettoyage
+### Bonus (2026-06-27) : rotation des frames tous les 2 jours — côté client, 0 infra
+Idée auteur : rendre le site plus vivant en changeant les frames régulièrement. Choix = **rotation côté client** (pas de cron/rebuild) :
+- `pickFrames` stocke désormais **toutes les bonnes frames** (cap `MAX_FRAMES=16`) au lieu de 4 → `cine.json` = 70 films / **1101 frames** (médiane 16/film).
+- `CineSpace.jsx` : `PERIOD = floor(now / 2j)`, `frameIndex = (PERIOD + hash(slug)) % nbFrames`. L'espace 3D + la planche-contact affichent `frameOfDay`, le détail une fenêtre de 4 (`frameWindow`). Déterministe (tout le monde voit pareil le même jour), désynchronisé entre films via le hash.
+- Cloudflare : **0 build/0 bande passante en plus** (frames = hotlinks CDN TMDB ; le fichier ne change pas entre syncs). Cycle ~32 j avant répétition pour les films à 16 frames ; le sync hebdo renouvelle le lot en prime.
+- Vérifié : logique de rotation testée en Node (stable 2j, avance+boucle, désync OK) + build prod OK. Rendu WebGL non capturé (conflit port preview vs serveur :4321).
 
-- [ ] Supprimer `scripts/scrape_letterboxd.py` et `scripts/README_scrape_letterboxd.txt` (obsolètes, tapent 403)
+## Phase 2 — Automatisation hebdo (GitHub Action) — À FAIRE
+
+- [ ] **Garde-fou cookie expiré (à faire AVANT le cron)** : check d'auth au démarrage de `sync-cine.mjs` — charger une page LB et vérifier le marqueur de session (`/sign-out/`). Si `LB_COOKIE` présent mais session invalide → **échouer fort** (exit ≠ 0, message clair) et NE PAS écraser `cine.json`. Sinon dégradation silencieuse (galerie rétréci). En cron, l'échec = mail GitHub auto = le signal d'expiration.
+- [ ] Secret GitHub repo : **`LB_COOKIE`** (le cookie capturé) + `TMDB_READ_TOKEN`. (Plus de `LB_USER`/`LB_PASS` — auto-login mort.)
+- [ ] `.github/workflows/sync-cine.yml` : cron hebdo + `workflow_dispatch` → `npm ci` → `npx playwright install --with-deps chromium` → `node scripts/sync-cine.mjs` → commit `cine.json` si changé → push → rebuild Cloudflare auto.
+- [ ] ⚠️ **Refresh du cookie** : la session Letterboxd dure des mois mais finit par expirer. Quand le cron échoue (cookie mort), refaire la capture manuelle : Safari connecté à LB → DevTools → Réseau → recharger → 1ère requête `letterboxd.com` → en-tête `Cookie` → copier → mettre à jour le secret `LB_COOKIE`. (~95% "0 geste", refresh rare.)
+- [ ] Tester l'Action en manuel (`workflow_dispatch`).
+
+## Phase 3 — Nettoyage ✅ (fait en Phase 1)
+- [x] `scripts/scrape_letterboxd.py` + README supprimés.
 
 ---
 

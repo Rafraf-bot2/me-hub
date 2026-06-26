@@ -7,6 +7,23 @@ import * as THREE from 'three';
 // click a frame for the detail (poster + all frames + Letterboxd). React island.
 
 const small = (url) => url.replace('/w1280/', '/w780/');
+
+// --- date-driven frame rotation ----------------------------------------------
+// Each film stores many frames; we show one that advances every 2 days. Seeded by
+// the date (same for everyone on a given day, deterministic) and offset per film
+// (via a slug hash) so the wall doesn't flip in unison. No rebuild/cron needed —
+// the browser computes today's pick on load.
+const ROTATE_DAYS = 2;
+const PERIOD = Math.floor(Date.now() / (ROTATE_DAYS * 86400000));
+const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0; return h; };
+const frameIndex = (f) => (PERIOD + hashStr(f.slug)) % f.frames.length;
+const frameOfDay = (f) => f.frames[frameIndex(f)];
+// A wrapping window of `n` frames starting at today's pick, for the detail panel.
+const frameWindow = (f, n = 4) => {
+  const i0 = frameIndex(f), len = f.frames.length;
+  return Array.from({ length: Math.min(n, len) }, (_, k) => f.frames[(i0 + k) % len]);
+};
+
 const mulberry32 = (a) => () => {
   a |= 0; a = (a + 0x6d2b79f5) | 0;
   let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -22,7 +39,7 @@ function useFrames(films) {
     // Random scatter (the "bordel") then relax overlaps so nothing stays hidden.
     const items = list.map((f) => {
       const w = 6 + rnd() * 3.2;
-      const aspect = f.frames[0].aspect || 1.778;
+      const aspect = frameOfDay(f).aspect || 1.778;
       return {
         f, w, h: w / aspect,
         x: (rnd() - 0.5) * 52,
@@ -46,7 +63,7 @@ function useFrames(films) {
     }
     return items.map((it) => ({
       film: it.f,
-      tex: small(it.f.frames[0].url),
+      tex: small(frameOfDay(it.f).url),
       size: [it.w, it.h],
       pos: [it.x, it.y, it.z],
       rot: it.rot,
@@ -185,14 +202,12 @@ function Rig({ movedRef, bounds }) {
 function ContactSheet({ films }) {
   return (
     <div className="cn-sheet">
-      {films.flatMap((f) =>
-        (f.frames || []).map((fr, i) => (
-          <a key={f.slug + i} href={f.letterboxd} target="_blank" rel="noreferrer" className="cn-cell">
-            <img src={small(fr.url)} alt={f.title} loading="lazy" />
-            <span>{f.title} · {f.year}</span>
-          </a>
-        ))
-      )}
+      {films.filter((f) => f.frames && f.frames.length).map((f) => (
+        <a key={f.slug} href={f.letterboxd} target="_blank" rel="noreferrer" className="cn-cell">
+          <img src={small(frameOfDay(f).url)} alt={f.title} loading="lazy" />
+          <span>{f.title} · {f.year}</span>
+        </a>
+      ))}
     </div>
   );
 }
@@ -255,7 +270,7 @@ export default function CineSpace({ films }) {
                 {selected.lists.map((l) => ` · ${l.name} #${l.rank}`).join('')}
               </div>
               <div className="cn-frames">
-                {selected.frames.map((fr, i) => <img key={i} src={small(fr.url)} alt="" />)}
+                {frameWindow(selected).map((fr, i) => <img key={i} src={small(fr.url)} alt="" />)}
               </div>
               <div className="cn-actions">
                 <a href={selected.letterboxd} target="_blank" rel="noreferrer" className="cn-lb">view on Letterboxd ↗</a>
