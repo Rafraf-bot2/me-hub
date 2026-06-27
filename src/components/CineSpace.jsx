@@ -18,11 +18,17 @@ const PERIOD = Math.floor(Date.now() / (ROTATE_DAYS * 86400000));
 const hashStr = (s) => { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) >>> 0; return h; };
 const frameIndex = (f) => (PERIOD + hashStr(f.slug)) % f.frames.length;
 const frameOfDay = (f) => f.frames[frameIndex(f)];
-// A wrapping window of `n` frames starting at today's pick, for the detail panel.
-const frameWindow = (f, n = 4) => {
-  const i0 = frameIndex(f), len = f.frames.length;
-  return Array.from({ length: Math.min(n, len) }, (_, k) => f.frames[(i0 + k) % len]);
+// A sliding window of `n` frame indices centred on the active one, clamped to
+// the ends, so the detail panel's contact strip follows navigation and always
+// shows (and highlights) the current photogram.
+const windowAround = (len, active, n = 5) => {
+  const span = Math.min(n, len);
+  const start = Math.max(0, Math.min(active - Math.floor(span / 2), len - span));
+  return Array.from({ length: span }, (_, k) => start + k);
 };
+
+// Sticker colours for the list "index tabs" on the dossier.
+const TABCOLORS = ['#f2c14e', '#86b3c4', '#e0937f', '#a7c489'];
 
 const mulberry32 = (a) => () => {
   a |= 0; a = (a + 0x6d2b79f5) | 0;
@@ -97,7 +103,7 @@ function Photogram({ item, movedRef, onSelect, setHover }) {
       {hovered && (
         <mesh position={[0, 0, -0.02]}>
           <planeGeometry args={[w + 0.12, h + 0.12]} />
-          <meshBasicMaterial color="#d8b25a" />
+          <meshBasicMaterial color="#e14b2a" />
         </mesh>
       )}
       <mesh
@@ -215,15 +221,35 @@ function ContactSheet({ films }) {
 export default function CineSpace({ films }) {
   const [eligible, setEligible] = useState(null);
   const [selected, setSelected] = useState(null);
+  const [activeIdx, setActiveIdx] = useState(0);
   const [about, setAbout] = useState(false);
   const [hover, setHover] = useState(null);
   const movedRef = useRef(false);
+  const stageRef = useRef();
+  const cursorRef = useRef();
   const items = useFrames(films);
   const bounds = useMemo(() => {
     let x = 6, y = 4;
     items.forEach((it) => { x = Math.max(x, Math.abs(it.pos[0])); y = Math.max(y, Math.abs(it.pos[1])); });
     return { x: x + 2, y: y + 2 };
   }, [items]);
+
+  // When a film opens, start the projector on today's frame-of-day.
+  useEffect(() => { if (selected) setActiveIdx(frameIndex(selected)); }, [selected]);
+
+  // Escape closes whichever overlay is open.
+  useEffect(() => {
+    if (!selected && !about) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') { setSelected(null); setAbout(false); }
+      if (selected) {
+        if (e.key === 'ArrowLeft') setActiveIdx((i) => Math.max(0, i - 1));
+        if (e.key === 'ArrowRight') setActiveIdx((i) => Math.min(selected.frames.length - 1, i + 1));
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selected, about]);
 
   useEffect(() => {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -232,6 +258,33 @@ export default function CineSpace({ films }) {
     try { webgl = !!document.createElement('canvas').getContext('webgl'); } catch {}
     setEligible(big && !reduced && webgl);
   }, []);
+
+  // Hover-to-navigate on the hero print: a directional arrow cursor that points
+  // left/right depending on the mouse half, and hides when there's nothing left
+  // that way (no wrap). Cursor element is moved imperatively to avoid re-renders.
+  const navAt = (e) => {
+    const r = stageRef.current.getBoundingClientRect();
+    const left = (e.clientX - r.left) < r.width / 2;
+    const avail = left ? activeIdx > 0 : activeIdx < selected.frames.length - 1;
+    return { left, avail, r };
+  };
+  const onStageMove = (e) => {
+    const cur = cursorRef.current, st = stageRef.current;
+    if (!cur || !st) return;
+    const { left, avail, r } = navAt(e);
+    if (!avail) { cur.style.display = 'none'; st.style.cursor = 'default'; return; }
+    st.style.cursor = 'none';
+    cur.style.display = 'flex';
+    cur.textContent = left ? '←' : '→';
+    cur.style.left = `${e.clientX - r.left}px`;
+    cur.style.top = `${e.clientY - r.top}px`;
+  };
+  const onStageLeave = () => { if (cursorRef.current) cursorRef.current.style.display = 'none'; };
+  const onStageClick = (e) => {
+    const { left, avail } = navAt(e);
+    if (!avail) return;
+    setActiveIdx((i) => left ? Math.max(0, i - 1) : Math.min(selected.frames.length - 1, i + 1));
+  };
 
   if (eligible === null) return null;
   if (!eligible) return <ContactSheet films={films} />;
@@ -260,22 +313,66 @@ export default function CineSpace({ films }) {
 
       {selected && (
         <div className="cn-overlay" onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
-          <div className="cn-detail">
-            {selected.poster && <img className="cn-poster" src={selected.poster} alt="" />}
-            <div className="cn-info">
-              <div className="cn-dtitle">{selected.title}</div>
-              <div className="cn-dmeta">
-                {selected.year}
-                {selected.rating ? ` · ${'★'.repeat(Math.floor(selected.rating))}${selected.rating % 1 ? '½' : ''}` : ''}
-                {selected.lists.map((l) => ` · ${l.name} #${l.rank}`).join('')}
+          <div className="cn-dossier">
+            <button className="cn-close" onClick={() => setSelected(null)} aria-label="Fermer">✕</button>
+
+            <div className="cn-left">
+              <div className="cn-poster-tape">
+                <span className="cn-tape" />
+                {selected.poster
+                  ? <img className="cn-poster" src={selected.poster} alt={`Affiche — ${selected.title}`} />
+                  : <div className="cn-poster cn-poster-ph" />}
               </div>
-              <div className="cn-frames">
-                {frameWindow(selected).map((fr, i) => <img key={i} src={small(fr.url)} alt="" />)}
+              {selected.rating ? (
+                <div className="cn-stamp">{'★'.repeat(Math.floor(selected.rating))}{selected.rating % 1 ? '½' : ''}</div>
+              ) : null}
+              {selected.lists?.length > 0 && (
+                <div className="cn-tabs">
+                  {selected.lists.map((l, i) => (
+                    <span
+                      key={l.list}
+                      className="cn-tab"
+                      style={{ background: TABCOLORS[i % TABCOLORS.length], transform: `rotate(${(i % 2 ? 1 : -1) * (1.5 + i)}deg)` }}
+                    >
+                      {l.name} <b>#{l.rank}</b>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {selected.director && <div className="cn-scribble">réal. {selected.director}</div>}
+            </div>
+
+            <div className="cn-right">
+              <div>
+                <h2 className="cn-dtitle">{selected.title}</h2>
+                <div className="cn-typed">
+                  {selected.year}{selected.runtime ? ` · ${selected.runtime} min` : ''} · {selected.frames.length} photogrammes
+                </div>
               </div>
-              <div className="cn-actions">
-                <a href={selected.letterboxd} target="_blank" rel="noreferrer" className="cn-lb">view on Letterboxd ↗</a>
-                <button onClick={() => setSelected(null)}>close</button>
+
+              <div className="cn-print-hero">
+                <div className="cn-stage" ref={stageRef} onMouseMove={onStageMove} onMouseLeave={onStageLeave} onClick={onStageClick}>
+                  <img key={activeIdx} src={selected.frames[activeIdx]?.url} alt="" />
+                  <div className="cn-cursor" ref={cursorRef} aria-hidden="true">→</div>
+                </div>
+                <span className="cn-print-cap">nº {String(activeIdx + 1).padStart(2, '0')} / {selected.frames.length}</span>
               </div>
+
+              <div className="cn-prints">
+                {windowAround(selected.frames.length, activeIdx).map((idx, k) => (
+                  <button
+                    key={idx}
+                    className={'cn-thumb' + (idx === activeIdx ? ' is-active' : '')}
+                    onClick={() => setActiveIdx(idx)}
+                    style={{ transform: `rotate(${[-3, 2, -1.5, 3, -2][k % 5]}deg)` }}
+                    aria-label={`Photogramme ${k + 1}`}
+                  >
+                    <img src={small(selected.frames[idx].url)} alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+
+              <a href={selected.letterboxd} target="_blank" rel="noreferrer" className="cn-lb">voir sur Letterboxd ↗</a>
             </div>
           </div>
         </div>
@@ -284,9 +381,10 @@ export default function CineSpace({ films }) {
       {about && (
         <div className="cn-overlay" onClick={(e) => e.target === e.currentTarget && setAbout(false)}>
           <div className="cn-aboutpane">
-            <div className="cn-alabel">ABOUT</div>
+            <div className="cn-alabel">À propos</div>
             <p>Ici ton pavé. Pourquoi le cinéma, ce que tu cherches dans une image — cadrage, lumière, grain. (Texte à écrire.)</p>
-            <button onClick={() => setAbout(false)}>close</button>
+            <div className="cn-asign">— rafraf</div>
+            <button onClick={() => setAbout(false)}>fermer</button>
           </div>
         </div>
       )}

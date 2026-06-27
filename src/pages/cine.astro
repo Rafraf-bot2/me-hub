@@ -13,7 +13,7 @@ import CineSpace from '../components/CineSpace.jsx';
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Fraunces:opsz,wght@9..144,400;9..144,500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,700;12..96,800&family=Courier+Prime:wght@400;700&family=Caveat:wght@400;600&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -31,8 +31,14 @@ import CineSpace from '../components/CineSpace.jsx';
         --paper: #e7e2d6;
         --muted: #8a8780;
         --gold: #d8b25a;
-        --mono: 'DM Mono', ui-monospace, monospace;
-        --serif: 'Fraunces', Georgia, serif;
+        --accent: #e14b2a;
+        --card: #1b1712;
+        --ink2: #ece4d4;
+        --disp: 'Bricolage Grotesque', system-ui, sans-serif;
+        --type: 'Courier Prime', ui-monospace, monospace;
+        --hand: 'Caveat', cursive;
+        --mono: 'Courier Prime', ui-monospace, monospace;
+        --serif: 'Bricolage Grotesque', Georgia, serif;
       }
       * { box-sizing: border-box; }
       html, body { margin: 0; height: 100%; background: var(--ink); }
@@ -56,40 +62,103 @@ import CineSpace from '../components/CineSpace.jsx';
       .cn-tr { top: 22px; right: 26px; }
       .cn-bl { bottom: 22px; left: 26px; pointer-events: none; }
       .cn-br { bottom: 22px; right: 26px; pointer-events: none; }
-      .cn-title { color: var(--paper); font-size: 14px; letter-spacing: 0.2em; }
-      .cn-sub { color: var(--muted); font-size: 11px; letter-spacing: 0.12em; margin-top: 4px; }
-      .cn-hint { color: var(--muted); font-size: 11px; letter-spacing: 0.08em; }
-      .cn-hov { color: var(--gold); font-size: 11px; letter-spacing: 0.1em; transition: opacity 0.25s; }
+      .cn-title { font-family: var(--disp); font-weight: 800; color: var(--paper); font-size: 16px; letter-spacing: 0.06em; }
+      .cn-title::after { content: '.'; color: var(--accent); }
+      .cn-sub { font-family: var(--type); color: var(--muted); font-size: 11px; letter-spacing: 0.1em; margin-top: 5px; }
+      .cn-hint { font-family: var(--hand); color: #b8b0a0; font-size: 17px; letter-spacing: 0; }
+      .cn-hov { font-family: var(--type); color: var(--accent); font-size: 11px; letter-spacing: 0.1em; transition: opacity 0.25s; }
       .cn-btn {
-        font-family: var(--mono); font-size: 11px; letter-spacing: 0.12em; color: var(--paper);
-        background: rgba(20, 20, 24, 0.6); border: 1px solid rgba(231, 226, 214, 0.25);
-        border-radius: 6px; padding: 7px 13px; cursor: pointer;
+        font-family: var(--type); font-size: 11px; letter-spacing: 0.08em; color: #211c16;
+        background: #efe7d6; border: none;
+        border-radius: 2px; padding: 7px 13px; cursor: pointer;
+        transform: rotate(2deg); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.32);
       }
-      .cn-btn:hover { border-color: var(--gold); color: var(--gold); }
+      .cn-btn:hover { color: var(--accent); transform: rotate(0deg); }
 
       .cn-overlay {
         position: absolute; inset: 0; z-index: 10; display: flex;
-        align-items: center; justify-content: center;
-        background: rgba(6, 6, 9, 0.84); backdrop-filter: blur(3px);
+        align-items: center; justify-content: center; padding: 24px;
+        background: rgba(5, 5, 8, 0.92); backdrop-filter: blur(5px);
+        animation: cnVeil 0.3s ease;
       }
-      .cn-detail { display: flex; gap: 26px; max-width: 760px; padding: 0 28px; align-items: flex-start; }
-      .cn-poster { width: 150px; aspect-ratio: 2/3; object-fit: cover; border-radius: 4px; border: 1px solid rgba(231, 226, 214, 0.2); flex: none; }
-      .cn-info { font-family: var(--mono); color: var(--paper); }
-      .cn-dtitle { font-family: var(--serif); font-size: 34px; line-height: 1.05; margin-bottom: 8px; }
-      .cn-dmeta { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 18px; }
-      .cn-frames { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }
-      .cn-frames img { width: 100%; aspect-ratio: 16/9; object-fit: cover; border-radius: 3px; }
-      .cn-actions { display: flex; gap: 10px; align-items: center; }
-      .cn-lb { color: var(--gold); font-size: 11px; text-decoration: none; border: 1px solid rgba(216, 178, 90, 0.4); border-radius: 5px; padding: 7px 12px; }
-      .cn-lb:hover { background: rgba(216, 178, 90, 0.12); }
-      .cn-actions button, .cn-aboutpane button {
-        font-family: var(--mono); font-size: 11px; color: var(--paper); background: transparent;
-        border: 1px solid rgba(231, 226, 214, 0.25); border-radius: 5px; padding: 7px 12px; cursor: pointer;
+      @keyframes cnVeil { from { opacity: 0; } to { opacity: 1; } }
+
+      /* --- film "dossier": a paper folder pulled off the messy wall --- */
+      .cn-dossier {
+        position: relative; display: grid; grid-template-columns: 200px 1fr; gap: 34px;
+        width: min(1160px, 95vw); max-height: 92vh; overflow: auto;
+        padding: 42px 46px 36px; color: var(--ink2); font-family: var(--type);
+        background: var(--card); border-radius: 3px;
+        border: 1px solid rgba(236, 228, 212, 0.08);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7);
+        transform: rotate(-0.5deg);
+      }
+      .cn-dossier::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: 3px;
+        box-shadow: inset 0 0 130px rgba(0, 0, 0, 0.35);
       }
 
-      .cn-aboutpane { max-width: 460px; font-family: var(--mono); color: #cfcabf; padding: 0 28px; }
-      .cn-alabel { font-size: 13px; letter-spacing: 0.22em; color: var(--gold); margin-bottom: 16px; }
-      .cn-aboutpane p { font-size: 14px; line-height: 1.9; margin: 0 0 20px; }
+      .cn-left { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+      .cn-poster-tape { position: relative; transform: rotate(-2.4deg); margin-top: 6px; }
+      .cn-poster { display: block; width: 200px; aspect-ratio: 2/3; object-fit: cover; border: 6px solid #fbf7ee; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28); }
+      .cn-poster-ph { background: #cfc6b4; }
+      .cn-tape { position: absolute; top: -13px; left: 50%; width: 78px; height: 26px; transform: translateX(-50%) rotate(-4deg); background: rgba(228, 208, 150, 0.55); border: 1px solid rgba(180, 160, 110, 0.35); }
+
+      .cn-stamp { font-family: var(--disp); font-weight: 700; font-size: 20px; letter-spacing: 0.05em; color: var(--accent); border: 2.5px solid var(--accent); border-radius: 6px; padding: 3px 12px 4px; transform: rotate(-7deg); opacity: 0.9; }
+      .cn-tabs { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+      .cn-tab { font-family: var(--type); font-size: 11px; color: #241f17; padding: 5px 10px 6px; border-radius: 2px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18); }
+      .cn-tab b { color: var(--accent); font-weight: 700; }
+      .cn-scribble { font-family: var(--hand); font-size: 21px; line-height: 1.05; color: var(--accent); transform: rotate(-3deg); text-align: center; }
+
+      .cn-right { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+      .cn-dtitle { font-family: var(--disp); font-weight: 800; font-size: 42px; line-height: 0.96; letter-spacing: -0.02em; margin: 0; color: var(--ink2); text-wrap: balance; }
+      .cn-typed { font-family: var(--type); font-size: 12px; letter-spacing: 0.02em; color: #9b9384; margin-top: 6px; }
+
+      .cn-print-hero { align-self: stretch; max-width: 100%; background: #fbf7ee; padding: 8px 8px 4px; box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32); transform: rotate(0.8deg); }
+      .cn-stage { position: relative; line-height: 0; }
+      .cn-print-hero img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; animation: cnFade 0.35s ease; }
+      @keyframes cnFade { from { opacity: 0.3; } to { opacity: 1; } }
+      .cn-cursor { position: absolute; display: none; pointer-events: none; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: rgba(225, 75, 42, 0.92); color: #fbf7ee; font-family: var(--disp); font-weight: 700; font-size: 20px; transform: translate(-50%, -50%); z-index: 4; }
+      .cn-print-cap { display: block; text-align: center; font-family: var(--hand); font-size: 17px; color: #c8bfae; margin-top: 2px; }
+
+      .cn-prints { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0 2px; }
+      .cn-thumb { width: 98px; padding: 5px; background: #fbf7ee; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); transition: filter 0.2s ease; }
+      .cn-thumb img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; }
+      .cn-thumb:hover { filter: brightness(1.05); }
+      .cn-thumb.is-active { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+      .cn-lb { align-self: flex-start; font-family: var(--disp); font-weight: 700; font-size: 13px; letter-spacing: 0.02em; color: #fbf7ee; background: var(--accent); padding: 10px 16px; border-radius: 3px; text-decoration: none; transform: rotate(-1.2deg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); }
+      .cn-lb:hover { filter: brightness(1.07); }
+
+      .cn-close { position: absolute; top: 12px; right: 14px; z-index: 3; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700; font-size: 14px; color: var(--accent); background: #fbf7ee; border: 2px solid var(--accent); border-radius: 50%; cursor: pointer; transform: rotate(8deg); }
+      .cn-close:hover { background: var(--accent); color: #fbf7ee; }
+
+      .cn-aboutpane button {
+        font-family: var(--disp); font-weight: 700; font-size: 12px; color: #fbf7ee; background: var(--accent);
+        border: none; border-radius: 3px; padding: 9px 16px; cursor: pointer;
+        transform: rotate(-1deg); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
+      }
+      .cn-aboutpane button:hover { filter: brightness(1.07); }
+
+      @media (max-width: 720px) {
+        .cn-dossier { grid-template-columns: 1fr; gap: 20px; padding: 32px 26px; transform: none; }
+        .cn-left { flex-direction: row; flex-wrap: wrap; justify-content: flex-start; }
+        .cn-poster { width: 130px; }
+        .cn-dtitle { font-size: 32px; }
+      }
+
+      .cn-aboutpane {
+        position: relative; max-width: 480px; font-family: var(--type); color: var(--ink2);
+        background: var(--card); border: 1px solid rgba(236, 228, 212, 0.08); border-radius: 3px;
+        padding: 42px 42px 32px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7); transform: rotate(-0.6deg);
+      }
+      .cn-aboutpane::before {
+        content: ""; position: absolute; top: -13px; left: 38px; width: 86px; height: 26px;
+        background: rgba(228, 208, 150, 0.5); border: 1px solid rgba(180, 160, 110, 0.3); transform: rotate(-5deg);
+      }
+      .cn-alabel { font-family: var(--type); font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--accent); margin-bottom: 16px; }
+      .cn-aboutpane p { font-family: var(--type); font-size: 14px; line-height: 1.95; margin: 0 0 22px; color: #d8d0c0; }
+      .cn-asign { font-family: var(--hand); font-size: 26px; color: var(--accent); transform: rotate(-2deg); margin-bottom: 20px; }
 
       .cn-sheet {
         display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

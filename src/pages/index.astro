@@ -13,20 +13,6 @@ const worlds = [
   { href: '/dessins', label: 'DESSINS', soft: 'Dessins' },
   { href: '/about', label: 'ABOUT', soft: 'About' },
 ];
-
-// The single bottom ticker row: which words, direction, duration.
-// The marquee is seamless only if ONE block of words is already wider than the
-// viewport (translateX(-50%) leaves a gap otherwise). Font size is vh-based, so
-// on a wide-but-short screen (ultrawide) 4 words don't fill the width — repeat
-// the list REPS times to always overflow, even at ~4:1 aspect ratios.
-const REPS = 4;
-const fill = (words: typeof worlds) => Array.from({ length: REPS }).flatMap(() => words);
-
-// One animation cycle scrolls a full block width, so the duration must scale with
-// REPS to keep a constant visual speed (a 4× wider block needs 4× the time).
-const rows = [
-  { cls: 'r1', dir: 'L', dur: `${20 * REPS}s`, top: '88%', words: worlds, soft: false },
-];
 ---
 
 <!doctype html>
@@ -67,35 +53,18 @@ const rows = [
       <img class="scrawl" src="/assets/animia.gif" alt="" aria-hidden="true" style="top:5%;left:60%;width:42vh;transform:rotate(-7deg);opacity:.65" />
       <img class="scrawl" src="/assets/sisyphus.gif" alt="" aria-hidden="true" style="bottom:1%;left:68%;width:42vh;transform:rotate(6deg);opacity:.65" />
       <img class="scrawl" src="/assets/thinking.gif" alt="" aria-hidden="true" style="top:8%;left:3%;width:42vh;transform:rotate(-4deg);opacity:.65" />
+      <img class="scrawl" src="/assets/wave.gif" alt="" aria-hidden="true" style="top:46%;left:1%;width:34vh;transform:rotate(4deg);opacity:.65" />
 
-      <!-- dotted film-strip rules framing the bottom ticker -->
-      <div class="rule" style="top:82%"></div>
-      <div class="rule" style="top:93%"></div>
 
-      {
-        rows.map((row) => (
-          <div class={`mq ${row.cls}`} style={`top:${row.top}`}>
-            <div class={`tr ${row.dir}`} style={`--d:${row.dur}`}>
-              <span class="set">
-                {fill(row.words).map((w) => (
-                  <>
-                    <a class="w" href={w.href}>{row.soft ? w.soft : w.label}</a>
-                    <span class="sp"></span>
-                  </>
-                ))}
-              </span>
-              <span class="set" aria-hidden="true">
-                {fill(row.words).map((w) => (
-                  <>
-                    <a class="w" href={w.href} tabindex="-1">{row.soft ? w.soft : w.label}</a>
-                    <span class="sp"></span>
-                  </>
-                ))}
-              </span>
-            </div>
-          </div>
-        ))
-      }
+      <!-- fixed bottom list: words sitting still, doodle separators between them -->
+      <div class="list" style="top:88%">
+        {worlds.map((w, i) => (
+          <>
+            {i > 0 && <span class="sp"></span>}
+            <a class="w" href={w.href}>{w.label}</a>
+          </>
+        ))}
+      </div>
 
       <div class="scan"></div>
       <svg class="grain" xmlns="http://www.w3.org/2000/svg">
@@ -154,15 +123,10 @@ const rows = [
       .foot-fallback { z-index: 0; background: linear-gradient(115deg, #2a2420 0%, #0c0b0a 45%, #161a1c 100%); }
       .foot { z-index: 1; width: 100%; height: 100%; object-fit: cover; }
 
-      .mq { position: absolute; left: 0; width: 100%; overflow: hidden; white-space: nowrap; line-height: 1; z-index: 2; transform: translateY(-50%); }
-      .r1 .sp { width: 6vh; height: 6vh; top: -0.5vh; }
-      .mq:hover .tr, .mq:focus-within .tr { animation-play-state: paused; }
-      .tr { display: inline-block; will-change: transform; animation-duration: calc(var(--d) * var(--speed)); animation-timing-function: linear; animation-iteration-count: infinite; }
-      .L { animation-name: goL; }
-      .R { animation-name: goR; }
-      .set { display: inline-block; }
-      @keyframes goL { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-      @keyframes goR { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+      /* fixed bottom list — a centred film-strip "ticket": dashed rules hug only
+         the words (no more empty rails running off into the edges). */
+      .list { position: absolute; left: 50%; top: 88%; z-index: 2; transform: translate(-50%, -50%); width: max-content; max-width: 92vw; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0 0.4vw; line-height: 1; padding: 1.7vh 2.6vw; border-top: 2px dashed rgba(255, 255, 255, 0.5); border-bottom: 2px dashed rgba(255, 255, 255, 0.5); }
+      .list .sp { width: 3.4vh; height: 3.4vh; top: 0; margin: 0; }
 
       .w {
         color: #fff;
@@ -171,7 +135,7 @@ const rows = [
         text-decoration: none;
         text-shadow: var(--aberr) 0 rgba(255, 30, 90, 0.55), calc(var(--aberr) * -1) 0 rgba(0, 225, 235, 0.5);
       }
-      .r1 .w { font-family: var(--display); font-weight: 400; font-size: 6vh; text-transform: uppercase; letter-spacing: 0.3px; }
+      .list .w { font-family: var(--display); font-weight: 400; font-size: 3.4vh; text-transform: uppercase; letter-spacing: 0.4px; padding: 0 1vw; }
 
       /* centre hero — big title + handwritten phrase */
       .hero { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.5vh; text-align: center; pointer-events: none; }
@@ -248,7 +212,6 @@ const rows = [
       .wipe { position: fixed; inset: 0; z-index: 20; display: none; pointer-events: none; will-change: clip-path; }
 
       @media (prefers-reduced-motion: reduce) {
-        .tr { animation: none !important; transform: translateX(0) !important; }
         .sp { animation: none !important; background-image: var(--d1); }
         .stage, .stage.glitching, .stage.glitch-hard { animation: none !important; }
         .scrib path { transition: none !important; animation: none !important; stroke-dashoffset: 0 !important; }
