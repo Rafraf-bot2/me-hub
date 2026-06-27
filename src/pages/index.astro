@@ -250,11 +250,13 @@ const worlds = [
       const accentByWorld: Record<string, string> = { '/cine': '#E24B4A', '/tech': '#1D9E75', '/dessins': '#D4537E', '/about': '#EF9F27' };
       let busy = false;
 
-      /* Once the world routes exist, swap the demo reverse for real navigation:
-           function enter(href: string) { window.location.href = href; }
-         For V1 (hub only) the transition plays and reverses in place so there
-         are no dead links. */
-      function enter(_href?: string) {}
+      /* Live world routes — the others are still unbuilt, so their transition
+         plays and reverses in place (no dead links) until they ship. */
+      const LIVE = new Set(['/cine']);
+      let pendingHref: string | null = null;
+      function enter() {
+        if (pendingHref && LIVE.has(pendingHref)) window.location.href = pendingHref;
+      }
 
       function inkOrDoodle(mode: string, x: number, y: number, accent: string, done: () => void) {
         const rad = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y)) * 1.12;
@@ -345,11 +347,12 @@ const worlds = [
         }, 68);
       }
 
-      function play(mode: string, x: number, y: number, accent: string) {
+      function play(mode: string, x: number, y: number, accent: string, href: string) {
         if (busy) return;
         busy = true;
+        pendingHref = href;
         const finish = () => { busy = false; };
-        if (reduce()) { finish(); return; }
+        if (reduce()) { enter(); finish(); return; }
         if (mode === 'zoom') return zoomT(x, y, finish);
         if (mode === 'glitch') return glitchT(finish);
         if (mode === 'storm') return stormT(finish);
@@ -362,7 +365,7 @@ const worlds = [
         e.preventDefault();
         const href = a.getAttribute('href')!;
         const mode = document.body.dataset.transition || 'doodle';
-        play(mode, (e as MouseEvent).clientX, (e as MouseEvent).clientY, accentByWorld[href] || '#EF9F27');
+        play(mode, (e as MouseEvent).clientX, (e as MouseEvent).clientY, accentByWorld[href] || '#EF9F27', href);
       });
 
       /* keyboard activation (Enter on a focused entry) routes through the same wipe */
@@ -374,7 +377,7 @@ const worlds = [
         const r = a.getBoundingClientRect();
         const href = a.getAttribute('href')!;
         const mode = document.body.dataset.transition || 'doodle';
-        play(mode, r.left + r.width / 2, r.top + r.height / 2, accentByWorld[href] || '#EF9F27');
+        play(mode, r.left + r.width / 2, r.top + r.height / 2, accentByWorld[href] || '#EF9F27', href);
       });
 
       /* ── hover scribble (freshman.tv-style) ──────────────────────────
