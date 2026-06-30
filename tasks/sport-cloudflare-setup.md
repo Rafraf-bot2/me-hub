@@ -39,16 +39,28 @@ npx wrangler secret put INGEST_TOKEN   # tape une valeur aléatoire, garde-la
 ```
 (ou Dash → Workers & Pages → me-hub → Settings → Variables and Secrets.)
 
-## 4. Cloudflare Access (mur privé sur /sport)
-Dash → **Zero Trust → Access → Applications → Add → Self-hosted** :
-- Hostname : `me-hub.raflamalice.workers.dev` · chemins : `/sport` **et** `/api/sport`.
-- Policy : Allow · Emails = `soulstories360@gmail.com`.
-- `/`, `/cine` restent publics (ne pas les couvrir).
+## 4. Domaine custom + Cloudflare Access (mur privé sur /sport)
+> ⚠️ CONFIRMÉ : Access **ne marche pas sur `*.workers.dev`** (pas une zone qu'on possède →
+> absent du menu "Select Domain"). Il FAUT un domaine custom. Domaine pris sur **Namecheap**.
 
-> ⚠️ Access sur un sous-domaine `*.workers.dev` peut être limité (Access vise surtout les
-> domaines d'une zone Cloudflare). Si ça coince : brancher un **domaine custom** sur le Worker
-> (Settings → Domains & Routes) et poser l'Access dessus. Tant que ce n'est pas en place,
-> garde D1 vide / pas de data perso exposée. À trancher quand on y sera.
+**4a. Relier le domaine à Cloudflare**
+1. Namecheap : acheter le domaine.
+2. Cloudflare → Add a site → le domaine → plan Free → note les **2 nameservers**.
+3. Namecheap → Nameservers → **Custom DNS** → coller les 2 NS Cloudflare. Attendre zone **Active**.
+
+**4b. Brancher le domaine sur le Worker**
+4. Workers & Pages → me-hub → Settings → **Domains & Routes → Add → Custom Domain** → le domaine (apex + `www`).
+5. ⚠️ **Désactiver la route `workers.dev`** (même section) — sinon `…workers.dev/sport` reste une
+   porte publique non gatée. Le site doit être **uniquement** sur le domaine custom.
+
+**4c. Access**
+6. Zero Trust → Access → Applications → Add → Self-hosted :
+   - Destination 1 : domaine + path `/sport` · Destination 2 (Add a destination) : path `/api/sport`.
+   - **Ne PAS couvrir `/ingest/*`** (le cron utilise un token, pas de SSO Access). `/`, `/cine` publics.
+   - Policy : Allow · Emails = `soulstories360@gmail.com`.
+
+> ⚠️ Après bascule sur le domaine custom : mettre `INGEST_URL` (secret GitHub) à
+> `https://<domaine>/ingest/hevy`, et le hub principal sert désormais sur `<domaine>`.
 
 ## 5. Cron Hevy (GitHub Action, calqué sur sync-cine)
 Secrets repo (Settings → Secrets and variables → Actions) : `HEVY_API_KEY`, `INGEST_TOKEN`,
