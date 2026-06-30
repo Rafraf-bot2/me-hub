@@ -1,36 +1,18 @@
-// Pull Hevy + transfo → data dashboard /sport (muscu, Palier 0).
-// Local/exploration : lit HEVY_API_KEY depuis l'env. Lancer avec :
+// Pull Hevy + transfo → data dashboard /sport (muscu, dev local).
+// Lit HEVY_API_KEY depuis l'env. Lancer avec :
 //   node --env-file=.env scripts/hevy_pull.mjs
-// La transfo vit dans src/lib/sport-transform.mjs (partagée avec la Pages Function
-// /api/sport et l'ingest D1). Ici on écrit src/data/sport.json pour la preview locale.
+// La transfo vit dans src/lib/sport-transform.mjs (partagée avec le Worker /api/sport).
+// Ici on écrit src/data/sport.json pour la preview locale (gitignoré, data perso).
+// L'ingestion prod (D1) passe par scripts/sport_ingest.mjs → POST /ingest/hevy.
 
 import { writeFileSync } from 'node:fs';
+import { pullHevy } from './hevy-api.mjs';
 import { enrichWorkouts, buildDashboard } from '../src/lib/sport-transform.mjs';
 
 const KEY = process.env.HEVY_API_KEY;
 if (!KEY) { console.error('⚠️ HEVY_API_KEY absent (node --env-file=.env ...)'); process.exit(1); }
 
-const API = 'https://api.hevyapp.com/v1';
-const h = { 'api-key': KEY };
-
-async function pageAll(path, listKey, pageSize = 10) {
-  let page = 1, out = [], pageCount = 1;
-  do {
-    const r = await fetch(`${API}/${path}?page=${page}&pageSize=${pageSize}`, { headers: h });
-    if (!r.ok) throw new Error(`${path} → HTTP ${r.status}`);
-    const j = await r.json();
-    out.push(...(j[listKey] || []));
-    pageCount = j.page_count ?? 1;
-    page++;
-  } while (page <= pageCount);
-  return out;
-}
-
-const [workouts, templates] = await Promise.all([
-  pageAll('workouts', 'workouts'),
-  pageAll('exercise_templates', 'exercise_templates', 100),
-]);
-
+const { workouts, templates } = await pullHevy(KEY);
 const muscleOf = new Map(templates.map((t) => [t.id, t.primary_muscle_group]));
 const enriched = enrichWorkouts(workouts, muscleOf);
 const dashboard = buildDashboard(enriched);

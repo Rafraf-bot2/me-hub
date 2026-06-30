@@ -1,0 +1,37 @@
+name: Sync /sport
+
+# Pull Hevy quotidien → POST /ingest/hevy (le Worker Cloudflare enrichit + upsert D1).
+# Pas de commit : la data muscu vit en D1 (privée), jamais dans le repo.
+#
+# Secrets repo requis (Settings → Secrets and variables → Actions) :
+#   HEVY_API_KEY  clé API Hevy (Pro)
+#   INGEST_URL    https://me-hub.raflamalice.workers.dev/ingest/hevy
+#   INGEST_TOKEN  identique au secret INGEST_TOKEN du Worker
+
+on:
+  schedule:
+    - cron: '0 5 * * *' # tous les jours 05:00 UTC
+  workflow_dispatch: {} # run manuel depuis l'onglet Actions
+
+concurrency:
+  group: sync-sport
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Aucune dépendance npm : le script n'utilise que fetch + scripts/hevy-api.mjs.
+      - name: Ingest Hevy → D1
+        env:
+          HEVY_API_KEY: ${{ secrets.HEVY_API_KEY }}
+          INGEST_URL: ${{ secrets.INGEST_URL }}
+          INGEST_TOKEN: ${{ secrets.INGEST_TOKEN }}
+        run: node scripts/sport_ingest.mjs
