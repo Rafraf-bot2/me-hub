@@ -1,84 +1,75 @@
-# Partie 4 — Mise en ligne /sport (Cloudflare) : ce que TOI tu dois faire
+# Partie 4 — Mise en ligne /sport (Cloudflare Workers) : ce qui reste
 
-Le code est déjà scaffoldé (voir « Côté code, déjà fait » en bas). Cette doc liste **les
-étapes compte Cloudflare**, qu'on ne peut pas automatiser. Archi retenue : **Cloudflare
-Pages + Pages Functions + D1**, cron Hevy en **GitHub Action** (comme /cine). Pas de Worker séparé.
+Le hub est **déjà déployé en Cloudflare Workers** (static assets) connecté au repo Git :
+chaque push sur `main` rebuild automatiquement (cf le commentaire du workflow /cine).
+URL : https://me-hub.raflamalice.workers.dev
 
-> Ordre : 1→2 déploient le site, 3→4 posent la data privée, 5 branche le cron, 6 le pont santé.
+Archi /sport : le **Worker** (`worker/index.js`, champ `main` de `wrangler.jsonc`) sert le
+site statique via le binding `ASSETS` et route `/api/sport` + `/ingest/*` vers D1.
+Le stub `sport.json` du build est **automatique** (`prebuild`), rien à committer à la main.
+
+> Ce qui est déjà fait côté code : `worker/index.js`, `src/lib/sport-transform.mjs`,
+> `db/schema.sql`, `wrangler.jsonc` (main + assets ; D1 commenté), `scripts/ensure-sport-stub.mjs`,
+> l'île qui fetch `/api/sport` avec fallback. Reste = les étapes COMPTE ci-dessous.
 
 ---
 
-## 1. Compte + login
+## 1. Login wrangler (si pas déjà fait)
 ```bash
-# créer un compte Cloudflare (gratuit) sur dash.cloudflare.com, puis :
+npx wrangler whoami   # déjà connecté ? sinon :
 npx wrangler login
-npx wrangler whoami   # vérifie que c'est bien connecté
 ```
 
-## 2. Déployer le site sur Cloudflare Pages
-Deux options — **A (Git, recommandé)** :
-- Dash Cloudflare → Workers & Pages → Create → Pages → **Connect to Git** → repo du hub.
-- Build command : `npm run build` · Output dir : `dist` · le dossier `functions/` est pris
-  automatiquement. Chaque push sur `main` redéploie.
-
-**B (direct)** : `npm run build && npx wrangler pages deploy dist`
-
-> ⚠️ **Avant le 1er build** : `src/data/sport.json` est gitignoré (data privée), donc absent
-> sur le serveur de build → l'import planterait. Commiter un **stub zéro** une seule fois :
-> ```bash
-> echo '{"week":{"start":"","end":"","days":[],"rest":0},"muscu":{"sessions":0,"volume_t":0,"minutes":0,"prs":0,"split":{"push":0,"pull":0,"legs":0,"core":0},"muscles":{}},"recent":[],"verdict":{"line1":"—","line2":""},"flags":[],"generated_at":""}' > src/data/sport.json
-> git add -f src/data/sport.json && git commit -m "chore(sport): stub build"
-> ```
-> En prod l'île remplace ce stub par la vraie data via `fetch('/api/sport')`. En local,
-> ton `node scripts/hevy_pull.mjs` réécrit le fichier avec la vraie data (non commitée).
-
-## 3. Créer la base D1 + appliquer le schéma
+## 2. Créer la base D1 + appliquer le schéma
 ```bash
 npx wrangler d1 create me-sport
-# → copie le database_id affiché dans wrangler.toml (champ REMPLIR_APRES_d1_create)
+#   → copie le "database_id" affiché
+```
+Puis dans `wrangler.jsonc` : ajouter une **virgule** après le bloc `"assets": { … }` et
+**décommenter** le bloc `d1_databases` en collant l'id. Enfin :
+```bash
 npx wrangler d1 execute me-sport --remote --file=db/schema.sql
 ```
-Dans le dash Pages : **Settings → Functions → D1 bindings** → variable `DB` = base `me-sport`
-(le binding wrangler.toml suffit en CLI ; le dash le double pour le déploiement Git).
+> Le prochain push (ou `npx wrangler deploy`) re-déploie le Worker avec le binding `DB`.
+> Tant que D1 n'est pas branché, `/api/sport` renvoie un dashboard **vide** (pas d'erreur).
+
+## 3. Secret du token d'ingestion
+```bash
+npx wrangler secret put INGEST_TOKEN   # tape une valeur aléatoire, garde-la
+```
+(ou Dash → Workers & Pages → me-hub → Settings → Variables and Secrets.)
 
 ## 4. Cloudflare Access (mur privé sur /sport)
 Dash → **Zero Trust → Access → Applications → Add → Self-hosted** :
-- Domaine : `<ton-domaine>` · chemins : `/sport` **et** `/api/sport`.
+- Hostname : `me-hub.raflamalice.workers.dev` · chemins : `/sport` **et** `/api/sport`.
 - Policy : Allow · Emails = `soulstories360@gmail.com`.
-- (le reste du hub — `/`, `/cine` — reste public, ne pas le couvrir.)
+- `/`, `/cine` restent publics (ne pas les couvrir).
 
-## 5. Secrets + cron Hevy (GitHub Action)
-```bash
-# token partagé ingest (génère une valeur aléatoire, garde-la) :
-npx wrangler pages secret put INGEST_TOKEN
-```
-Côté GitHub repo → **Settings → Secrets and variables → Actions** : ajouter
-`HEVY_API_KEY`, `INGEST_TOKEN`, `INGEST_URL` (= `https://<domaine>/ingest/hevy`).
-Le workflow (à écrire, calqué sur celui de /cine) pull Hevy hebdo puis :
+> ⚠️ Access sur un sous-domaine `*.workers.dev` peut être limité (Access vise surtout les
+> domaines d'une zone Cloudflare). Si ça coince : brancher un **domaine custom** sur le Worker
+> (Settings → Domains & Routes) et poser l'Access dessus. Tant que ce n'est pas en place,
+> garde D1 vide / pas de data perso exposée. À trancher quand on y sera.
+
+## 5. Cron Hevy (GitHub Action, calqué sur sync-cine)
+Secrets repo (Settings → Secrets and variables → Actions) : `HEVY_API_KEY`, `INGEST_TOKEN`,
+`INGEST_URL` (= `https://me-hub.raflamalice.workers.dev/ingest/hevy`).
+Workflow hebdo → pull Hevy puis :
 ```bash
 curl -X POST "$INGEST_URL" -H "x-ingest-token: $INGEST_TOKEN" \
      -H 'content-type: application/json' --data @hevy-raw.json
 ```
 (`hevy-raw.json` = `{ "workouts": [...], "templates": [...] }`, sorties brutes de l'API Hevy.)
+→ **je l'écris quand le D1 + le secret sont en place.**
 
 ## 6. Pont Health Connect (plus tard, Palier nutrition/pas)
-App webhook (ou Tasker) sur le tel → `POST https://<domaine>/ingest/health` avec le header
-`x-ingest-token` et un body `{ date, steps, kcal_in, kcal_out, protein_g, carbs_g, fat_g, weight_kg }`.
+App webhook (ou Tasker) sur le tel → `POST .../ingest/health` (header `x-ingest-token`),
+body `{ date, steps, kcal_in, kcal_out, protein_g, carbs_g, fat_g, weight_kg }`.
 
 ---
 
-## Côté code, déjà fait (ne touche pas, c'est prêt)
-- `src/lib/sport-transform.mjs` — transfo partagée (enrich + buildDashboard + coach).
-- `functions/api/sport.js` — `GET /api/sport` : lit D1, fenêtre 7j glissante, renvoie le dashboard.
-- `functions/ingest/hevy.js` — `POST /ingest/hevy` (token) : enrich + upsert workouts.
-- `functions/ingest/health.js` — `POST /ingest/health` (token) : upsert daily.
-- `db/schema.sql` — tables `daily`, `workouts`, `coach_briefs`.
-- `wrangler.toml` — binding D1 `DB` (database_id à remplir étape 3).
-- `src/components/SportApp.jsx` — fetch `/api/sport` au montage, fallback JSON SSR (dev OK).
-
-## Tester en local avant de pousser (optionnel)
+## Tester le Worker en local (optionnel)
 ```bash
 npx wrangler d1 execute me-sport --local --file=db/schema.sql
 echo 'INGEST_TOKEN="dev"' > .dev.vars
-npm run build && npx wrangler pages dev dist   # sert /sport + /api/sport + /ingest/* en local
+npm run build && npx wrangler dev    # sert /sport + /api/sport + /ingest/* en local
 ```

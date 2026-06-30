@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev --port ${PORT:-4321}",
+    "prebuild": "node scripts/ensure-sport-stub.mjs",
     "build": "astro build",
     "preview": "astro preview"
   },

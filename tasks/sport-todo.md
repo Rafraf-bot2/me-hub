@@ -92,16 +92,16 @@
 - [x] **Pipeline** : `hevy_pull.mjs` émet maintenant `muscu.muscles` (séries par muscle Hevy sur la fenêtre 7j).
 
 ### 4. Infra Cloudflare (Palier B) — CODE ✅ (2026-06-30) · COMPTE ⏳
-> Archi révisée : **Pages Functions + D1** (pas de Worker séparé), cron Hevy = GitHub Action (comme /cine).
-> Détail des étapes compte dans **`tasks/sport-cloudflare-setup.md`**.
+> ⚠️ Archi CORRIGÉE : le hub est déjà déployé en **Cloudflare Workers static assets** (pas Pages),
+> connecté au Git (push main = rebuild auto). Donc **Worker entry** (`worker/index.js`), PAS de
+> dossier `functions/` (convention Pages, inutile ici). Détail compte : `tasks/sport-cloudflare-setup.md`.
 - [x] Lib partagée `src/lib/sport-transform.mjs` (enrich + buildDashboard + coach), `hevy_pull.mjs` refactoré dessus (sortie identique vérifiée).
-- [x] `functions/api/sport.js` — `GET /api/sport` (lit D1, fenêtre 7j glissante, renvoie le dashboard).
-- [x] `functions/ingest/hevy.js` + `functions/ingest/health.js` (token-gated, upsert D1).
-- [x] `db/schema.sql` (`daily`, `workouts`, `coach_briefs`) + `wrangler.toml` (binding D1 `DB`).
-- [x] Île bascule en **fetch `/api/sport`** + **fallback JSON SSR** (dev marche toujours, vérifié).
-- [ ] **COMPTE (toi)** : login wrangler · déployer sur Pages · `d1 create` + schéma · **Cloudflare Access** sur /sport + /api/sport · secret `INGEST_TOKEN`.
-- [ ] Écrire la **GitHub Action** cron Hevy → `POST /ingest/hevy` (calquée sur celle de /cine).
-- [ ] Stub `src/data/sport.json` zéro commité avant le 1er build (data réelle reste gitignorée).
+- [x] `worker/index.js` (`main`) : route `GET /api/sport` (D1, fenêtre 7j) + `POST /ingest/{hevy,health}` (token), sinon `ASSETS.fetch` (statique). Tolère l'absence de D1 (dashboard vide, pas de 500).
+- [x] `wrangler.jsonc` : `main` + binding `ASSETS` (D1 commenté, à activer après `d1 create`). Ancien `wrangler.toml` (doublon Pages) supprimé.
+- [x] `db/schema.sql` (`daily`, `workouts`, `coach_briefs`).
+- [x] Île en **fetch `/api/sport`** + **fallback JSON SSR**. Stub build **automatique** (`prebuild` → `scripts/ensure-sport-stub.mjs`), plus rien à committer à la main.
+- [ ] **COMPTE (toi)** : `d1 create me-sport` (+ coller l'id, décommenter D1 dans wrangler.jsonc) · appliquer le schéma · secret `INGEST_TOKEN` · **Cloudflare Access** sur /sport + /api/sport (caveat workers.dev → peut-être domaine custom).
+- [ ] Écrire la **GitHub Action** cron Hevy → `POST /ingest/hevy` (quand D1 + secret en place).
 
 ### 5. Health Connect (Palier steps + nutrition)
 - [ ] Activer Samsung Health → Health Connect (sync). Vérifier que Yazio écrit aussi (déjà connecté ✅).

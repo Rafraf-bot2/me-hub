@@ -1,10 +1,19 @@
 {
-  // Déploiement Cloudflare Workers en mode "static assets" (site Astro statique).
-  // Le build (`npm run build`) génère ./dist, que Wrangler sert tel quel.
-  // Le jour où on veut du SSR : ajouter l'adaptateur @astrojs/cloudflare + un "main".
+  // Déploiement Cloudflare Workers "static assets" (site Astro statique en ./dist)
+  // + un Worker (worker/index.js) pour les routes dynamiques privées du monde /sport.
+  // Le build (`npm run build`) génère ./dist ; Wrangler sert les assets et route le
+  // reste (/api/sport, /ingest/*) vers le Worker.
   "name": "me-hub",
   "compatibility_date": "2026-06-26",
+  "main": "worker/index.js",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS"
   }
+
+  // D1 (store privé /sport) — À ACTIVER après `wrangler d1 create me-sport` :
+  // mettre une virgule après le bloc "assets" ci-dessus, puis décommenter :
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "me-sport", "database_id": "COLLER_ICI" }
+  // ]
 }
