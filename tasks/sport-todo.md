@@ -148,6 +148,12 @@ CREATE TABLE coach_briefs (  -- brief hebdo
 
 ## Review (historique des passes)
 
+**2026-06-30 (quater) — /sport EN LIGNE :**
+- Découverte : le hub est en **Cloudflare Workers static assets** (pas Pages), Git-connecté (push = rebuild auto). Mon scaffold Pages cassait le build → réécrit en **Worker entry** (`worker/index.js`, `main` de wrangler.jsonc), `wrangler.toml`+`functions/` supprimés, stub `sport.json` auto au `prebuild`.
+- Bug SSR rattrapé : `generated_at` vide (stub) → `new Date("")` Invalid → `Intl` jette. Fix Date.parse+isNaN, vérifié en condition CI.
+- **LIVE** : `me-hub.raflamalice.workers.dev/sport` → 200 ; `/api/sport` → 200, Worker calcule `buildDashboard([])` (dashboard vide, D1 pas branché = OK voulu).
+- ⚠️ /sport est **PUBLIC** pour l'instant (mais vide). Poser **Cloudflare Access AVANT** de brancher la vraie data D1.
+
 **2026-06-30 (ter) — Partie 4 scaffoldée + toolbar Astro retirée :**
 - Décision archi : **Pages Functions + D1** au lieu d'un Worker séparé (même projet/domaine, binding D1 direct, zéro CORS), cron Hevy gardé en GitHub Action. Plus simple.
 - Logique de transfo extraite dans `src/lib/sport-transform.mjs` (partagée script local / ingest / api). `hevy_pull.mjs` refactoré dessus → **sortie JSON identique vérifiée** (diff hors `generated_at`).
