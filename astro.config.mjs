@@ -7,4 +7,5 @@ import react from '@astrojs/react';
 export default defineConfig({
   site: 'https://rafraf.example',
   integrations: [react()],
+  devToolbar: { enabled: false },
 });
