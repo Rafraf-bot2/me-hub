@@ -26,8 +26,10 @@ export default function SportApp({ sport: initial }) {
   const [sport, setSport] = useState(initial);
   const m = sport.muscu;
   const [tab, setTab] = useState('apercu');
+  // generated_at peut être vide (stub de build) → date du jour en repli (pas d'Invalid Date)
+  const genTs = Date.parse(sport.generated_at);
   const dateLabel = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })
-    .format(new Date(sport.generated_at ?? Date.now()));
+    .format(Number.isNaN(genTs) ? Date.now() : genTs);
 
   useEffect(() => {
     const sync = () => {
