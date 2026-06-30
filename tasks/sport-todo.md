@@ -102,7 +102,9 @@
 - [x] Île en **fetch `/api/sport`** + **fallback JSON SSR**. Stub build **automatique** (`prebuild` → `scripts/ensure-sport-stub.mjs`), plus rien à committer à la main.
 - [x] D1 créée (`me-sport`, id `8cae5daf-…`), binding `DB` dans wrangler.jsonc, **schéma appliqué** (3 tables OK).
 - [x] **GitHub Action** `sync-sport.yml` (quotidien 05:00 UTC + dispatch) → `scripts/sport_ingest.mjs` (pull Hevy brut → POST /ingest/hevy → D1). Helper `scripts/hevy-api.mjs` partagé. Pas de commit (data en D1).
-- [ ] **COMPTE (toi), reste** : ① token `openssl rand -hex 32` ② **Cloudflare Access** sur /sport + /api/sport (PAS /ingest) ③ `wrangler secret put INGEST_TOKEN` ④ secrets GitHub `HEVY_API_KEY`/`INGEST_TOKEN`/`INGEST_URL` ⑤ Run workflow → 1er remplissage.
+- [x] **COMPTE — FAIT (2026-06-30)** : domaine `rafraf.space` (Namecheap → Cloudflare, NS délégués, zone Active), branché en Custom Domain sur le Worker, route `workers.dev` **coupée** (404). **Cloudflare Access** sur `/sport` + `/api/sport` (login PIN email, vérifié 302 ; `/` + `/cine` publics ; `/ingest` libre = 403 sans token). Secret Worker `INGEST_TOKEN` posé. Secrets GitHub `HEVY_API_KEY`/`INGEST_TOKEN`/`INGEST_URL` posés. Workflow lancé → **50 séances en D1** (déc. 2025 → 28/06). `/api/sport` calcule la fenêtre 7j en live.
+
+### ✅ PARTIE 4 TERMINÉE — /sport est live, privé, auto-synchronisé quotidiennement.
 
 ### 5. Health Connect (Palier steps + nutrition)
 - [ ] Activer Samsung Health → Health Connect (sync). Vérifier que Yazio écrit aussi (déjà connecté ✅).
