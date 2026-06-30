@@ -21,3 +21,10 @@ raw-media/
 /cinoche.png
 /dro.png
 /techo.png
+
+# data sport perso (Hevy/Health Connect) — jamais commitée
+src/data/sport.json
+
+# cloudflare / wrangler (état local + secrets de dev)
+.wrangler/
+.dev.vars

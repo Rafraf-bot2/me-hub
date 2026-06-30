@@ -1,0 +1,161 @@
+---
+// Monde /sport — assistant coach. DA "délire Variant" : color-blocking fluo/crème/ink,
+// typo grotesque XXL, hero = le verdict du coach (pas une grille de KPI).
+// Palier 0 : data MUSCU réelle (Hevy, via scripts/hevy_pull.mjs → src/data/sport.json).
+// Les blocs nutrition/pas/poids sont des teasers tant que Health Connect n'est pas branché.
+// NOTE : version live privée → ce JSON sera remplacé par un fetch /api/sport (Cloudflare
+// Worker + D1, gardé par Cloudflare Access). Ici on passe la data en props à l'île.
+// SPA : la coquille à onglets (Aperçu/Muscu/Graille/Coach) vit dans SportApp.jsx,
+// dock = tab bar, état synchronisé au hash de l'URL.
+import sport from '../data/sport.json';
+import SportApp from '../components/SportApp.jsx';
+---
+
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>sport — rafraf</title>
+    <meta name="description" content="Assistant coach — muscu, nutrition, activité." />
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap"
+    />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.24.0/dist/tabler-icons.min.css" />
+  </head>
+  <body>
+    <SportApp client:load sport={sport} />
+
+    <style is:global>
+      @font-face {
+        font-family: 'Clash Display';
+        src: url('/fonts/clash-display.woff2') format('woff2');
+        font-weight: 200 700;
+        font-display: swap;
+        font-style: normal;
+      }
+      :root {
+        --page: #0c0d09;
+        --fluo: #ccff00;
+        --cream: #f1eee2;
+        --block: #1a1c14;
+        --alert: #ff7a4d;
+        --ink: #0e1100;
+        --disp: 'Clash Display', 'Space Grotesk', system-ui, sans-serif;
+        --g: 'Space Grotesk', system-ui, sans-serif;
+        --mono: 'Space Mono', ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--page); }
+      body { font-family: var(--g); color: #eef1e6; -webkit-font-smoothing: antialiased; }
+      .sp-wrap { max-width: 680px; margin: 0 auto; padding: 18px 16px 90px; }
+
+      .sp-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px 16px; }
+      .sp-brand { display: flex; align-items: center; gap: 10px; }
+      .sp-logo { font-family: var(--mono); font-weight: 700; letter-spacing: 3px; font-size: 14px; color: var(--ink); background: var(--fluo); padding: 4px 10px; border-radius: 6px; }
+      .sp-date { color: #6f7464; font-size: 13px; }
+      .sp-back { color: #8a9079; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 5px; }
+      .sp-back:hover { color: var(--fluo); }
+
+      .sp-hero { background: var(--fluo); border-radius: 18px; padding: 26px; margin-bottom: 12px; }
+      .sp-kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 1.5px; color: #5c6b00; }
+      .sp-hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-top: 8px; }
+      .sp-verdict { font-family: var(--disp); font-size: 42px; font-weight: 700; letter-spacing: -0.6px; line-height: 0.98; color: var(--ink); margin: 0; flex: 1; min-width: 220px; }
+      .sp-hero-stat { display: flex; align-items: baseline; gap: 10px; }
+      .sp-hero-num { font-family: var(--disp); font-size: 80px; font-weight: 700; letter-spacing: -2px; line-height: 0.78; color: var(--ink); }
+      .sp-hero-lab { font-size: 12px; font-weight: 500; color: #5c6b00; line-height: 1.2; }
+
+      .sp-flags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+      .sp-flag { font-size: 13px; padding: 6px 12px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; }
+      .sp-flag i { font-size: 14px; }
+      .sp-flag-alert { background: #2a1410; color: #ff9a73; }
+      .sp-flag-good { background: #1f2a0a; color: #b6e44e; }
+      .sp-flag-warn { background: #2a2410; color: #e6c25a; }
+
+      .sp-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+      .sp-tile { border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 7px; }
+      .sp-cream { background: var(--cream); color: var(--ink); }
+      .sp-darkblock { background: var(--block); }
+      .sp-tile-num { font-family: var(--disp); font-size: 44px; font-weight: 700; letter-spacing: -1px; line-height: 0.9; }
+      .sp-unit { font-size: 20px; color: #9a9888; margin-left: 2px; }
+      .sp-tile-lab { font-size: 12px; color: #6b6a5e; }
+      .sp-muted { color: #6f7464; }
+      .sp-pend-val { font-family: var(--disp); font-size: 44px; font-weight: 700; line-height: 0.9; color: #c6c2b2; }
+      .sp-lab-ic { font-size: 13px; margin-right: 5px; vertical-align: -1px; }
+      .sp-pend-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #a8a596; margin-top: 1px; }
+      .sp-pend-tag i { font-size: 12px; }
+
+      .sp-block { border-radius: 16px; padding: 22px; margin-bottom: 12px; }
+      .sp-block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+      .sp-block-title { font-family: var(--disp); font-size: 23px; font-weight: 700; letter-spacing: -0.3px; color: #eef1e6; }
+      .sp-via { font-family: var(--mono); font-size: 11px; color: #9a9888; }
+      .sp-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+      .sp-day { text-align: center; min-width: 0; }
+      .sp-daycell { height: 66px; border-radius: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 2px; padding: 4px; overflow: hidden; }
+      .sp-day-off { background: transparent; border: 1px dashed #2e3124; }
+      .sp-day-on { background: var(--fluo); }
+      .sp-day-legs { background: var(--alert); }
+      .sp-day-ic { font-size: 19px; color: #3d4700; }
+      .sp-day-tag { font-size: 11px; font-weight: 500; color: #3d4700; }
+      .sp-day-legs .sp-day-ic, .sp-day-legs .sp-day-tag { color: #5c1d00; }
+      .sp-day-lab { display: block; font-family: var(--mono); font-size: 11px; line-height: 1.2; color: #6f7464; margin-top: 7px; }
+      .sp-day-lab-on { color: #cfe07a; }
+      .sp-week-cap { font-size: 12px; color: #7d8473; margin-top: 14px; }
+
+      .sp-recent { margin-top: 14px; }
+      .sp-row { display: flex; align-items: center; gap: 12px; padding: 11px 0; }
+      .sp-row-div { border-bottom: 1px solid #2a2d20; }
+      .sp-row-tag { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+      .sp-tag-push, .sp-tag-pull { background: #1f2a0a; color: var(--fluo); }
+      .sp-tag-legs { background: #2a1410; color: var(--alert); }
+      .sp-tag-core, .sp-tag-other { background: #20231a; color: #8a9079; }
+      .sp-row-main { flex: 1; min-width: 0; }
+      .sp-row-title { font-family: var(--disp); font-size: 17px; font-weight: 600; color: #eef1e6; }
+      .sp-pr { font-size: 12px; color: var(--fluo); }
+      .sp-row-sub { font-size: 12px; color: #6f7464; margin-top: 2px; }
+      .sp-row-dur { font-family: var(--mono); font-size: 15px; color: #9aa888; flex-shrink: 0; }
+      .sp-unit-sm { font-size: 11px; color: #6f7464; }
+
+      .sp-dock { display: flex; justify-content: center; gap: 8px; background: var(--block); border-radius: 40px; padding: 9px; width: fit-content; margin: 18px auto 0; position: sticky; bottom: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.45); }
+      .sp-dock-btn { width: 42px; height: 42px; border-radius: 50%; border: 0; background: #26291d; color: #9aa888; display: flex; align-items: center; justify-content: center; font-size: 20px; text-decoration: none; cursor: pointer; font: inherit; transition: background .15s, color .15s; }
+      .sp-dock-active { background: var(--fluo); color: var(--ink); }
+      .sp-dock-btn:hover { filter: brightness(1.12); }
+
+      .sp-panel { animation: sp-fade .22s ease; }
+      @keyframes sp-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+      .sp-verdict-sm { font-size: 34px; margin-top: 8px; }
+
+      .sp-mapwrap { display: flex; justify-content: center; padding: 4px 0 2px; }
+      .sp-map { width: 100%; max-width: 320px; height: auto; }
+      .sp-sil { fill: #15170f; stroke: #2f3322; stroke-width: 1.4; }
+      .sp-hot { color: var(--fluo); font-weight: 600; }
+      .sp-map-cap { fill: #6f7464; font-family: var(--mono); font-size: 9px; letter-spacing: 2px; text-anchor: middle; }
+
+      .sp-bars { margin-top: 16px; display: flex; flex-direction: column; gap: 9px; }
+      .sp-bar-row { display: flex; align-items: center; gap: 10px; }
+      .sp-bar-lab { width: 54px; font-size: 12px; color: #9aa888; flex-shrink: 0; }
+      .sp-bar-track { flex: 1; height: 10px; background: #23271b; border-radius: 6px; overflow: hidden; }
+      .sp-bar-fill { height: 100%; background: var(--fluo); border-radius: 6px; transition: width .4s ease; }
+      .sp-bar-empty { background: var(--alert); }
+      .sp-bar-val { width: 22px; text-align: right; font-family: var(--mono); font-size: 12px; color: #cfe07a; flex-shrink: 0; }
+
+      .sp-soon { display: flex; align-items: center; gap: 14px; }
+      .sp-soon-ic { font-size: 26px; color: var(--fluo); flex-shrink: 0; }
+      .sp-soon-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+      .sp-soon-title { font-family: var(--disp); font-size: 18px; font-weight: 600; color: #eef1e6; }
+      .sp-soon-text { font-size: 13px; color: #7d8473; line-height: 1.35; }
+      .sp-soon-tag { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--ink); background: var(--fluo); padding: 4px 9px; border-radius: 20px; flex-shrink: 0; }
+
+      @media (max-width: 560px) {
+        .sp-verdict { font-size: 32px; }
+        .sp-hero-num { font-size: 60px; }
+        .sp-tiles, .sp-soon-grid { grid-template-columns: 1fr 1fr; }
+        .sp-tile-num { font-size: 36px; }
+      }
+    </style>
+  </body>
+</html>
