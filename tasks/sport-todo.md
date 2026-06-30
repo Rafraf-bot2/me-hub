@@ -100,8 +100,9 @@
 - [x] `wrangler.jsonc` : `main` + binding `ASSETS` (D1 commenté, à activer après `d1 create`). Ancien `wrangler.toml` (doublon Pages) supprimé.
 - [x] `db/schema.sql` (`daily`, `workouts`, `coach_briefs`).
 - [x] Île en **fetch `/api/sport`** + **fallback JSON SSR**. Stub build **automatique** (`prebuild` → `scripts/ensure-sport-stub.mjs`), plus rien à committer à la main.
-- [ ] **COMPTE (toi)** : `d1 create me-sport` (+ coller l'id, décommenter D1 dans wrangler.jsonc) · appliquer le schéma · secret `INGEST_TOKEN` · **Cloudflare Access** sur /sport + /api/sport (caveat workers.dev → peut-être domaine custom).
-- [ ] Écrire la **GitHub Action** cron Hevy → `POST /ingest/hevy` (quand D1 + secret en place).
+- [x] D1 créée (`me-sport`, id `8cae5daf-…`), binding `DB` dans wrangler.jsonc, **schéma appliqué** (3 tables OK).
+- [x] **GitHub Action** `sync-sport.yml` (quotidien 05:00 UTC + dispatch) → `scripts/sport_ingest.mjs` (pull Hevy brut → POST /ingest/hevy → D1). Helper `scripts/hevy-api.mjs` partagé. Pas de commit (data en D1).
+- [ ] **COMPTE (toi), reste** : ① token `openssl rand -hex 32` ② **Cloudflare Access** sur /sport + /api/sport (PAS /ingest) ③ `wrangler secret put INGEST_TOKEN` ④ secrets GitHub `HEVY_API_KEY`/`INGEST_TOKEN`/`INGEST_URL` ⑤ Run workflow → 1er remplissage.
 
 ### 5. Health Connect (Palier steps + nutrition)
 - [ ] Activer Samsung Health → Health Connect (sync). Vérifier que Yazio écrit aussi (déjà connecté ✅).
