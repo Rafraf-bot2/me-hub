@@ -19,10 +19,17 @@ export default {
 };
 
 async function apiSport(env) {
-  // D1 pas encore branché → on renvoie un dashboard vide propre (pas une 500).
-  if (!env.DB) return Response.json(buildDashboard([]), { headers: { 'cache-control': 'no-store' } });
-  const { results } = await env.DB.prepare('SELECT raw FROM workouts ORDER BY date ASC').all();
-  const enriched = (results || []).map((r) => JSON.parse(r.raw));
+  // Robuste : D1 pas branché OU schéma pas encore appliqué OU base vide
+  // → dashboard vide propre, jamais une 500.
+  let enriched = [];
+  if (env.DB) {
+    try {
+      const { results } = await env.DB.prepare('SELECT raw FROM workouts ORDER BY date ASC').all();
+      enriched = (results || []).map((r) => JSON.parse(r.raw));
+    } catch {
+      enriched = [];
+    }
+  }
   return Response.json(buildDashboard(enriched), { headers: { 'cache-control': 'no-store' } });
 }
 

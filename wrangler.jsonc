@@ -9,11 +9,14 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
-  }
+  },
 
-  // D1 (store privé /sport) — À ACTIVER après `wrangler d1 create me-sport` :
-  // mettre une virgule après le bloc "assets" ci-dessus, puis décommenter :
-  // "d1_databases": [
-  //   { "binding": "DB", "database_name": "me-sport", "database_id": "COLLER_ICI" }
-  // ]
+  // D1 — store privé du monde /sport (binding `DB` consommé par worker/index.js).
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "me-sport",
+      "database_id": "8cae5daf-9dc4-4055-9ab0-6c26b0ecf167"
+    }
+  ]
 }
