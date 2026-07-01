@@ -97,31 +97,70 @@ Si une source manque, branche-la d'abord (sinon le champ restera `null`, ce qui 
 
 ## Étape 3 — La tâche Tasker « Sport → D1 »
 
-Créer une **Task** avec ces actions (dans l'ordre) :
+### Le format que renvoie le plugin (vérifié sur le repo)
+Un *Read Aggregated Data* portant sur **une seule** métrique renvoie toujours ce JSON :
+```json
+{ "dataOrigins": [], "doubleValues": { "Nutrition_calories_total": 2100.0 }, "longValues": { "Steps_count_total": 8421 } }
+```
+→ **une seule valeur**, soit dans `longValues` (entiers : pas), soit dans `doubleValues` (réels : kcal, macros, poids).
+Objet vide (`{}`) = pas de data pour la période. D'où un extracteur générique (« prends la seule
+valeur présente ») qui **ne dépend pas du nom de clé exact** → robuste aux évolutions du plugin.
 
-1. **Plugin → Tasker Health Connect → Read Aggregated Data** : *Steps*, période = aujourd'hui (00:00 → maintenant).
-   → sortie JSON dans une variable, ex. `%hc_steps`. Extraire le total avec *Variable Set* / *JavaScriptlet* → `%steps`.
-2. Idem **Total Calories Burned** (agrégé, aujourd'hui) → `%kcal_out`.
-3. Idem **Nutrition** (agrégé, aujourd'hui) : énergie → `%kcal_in`, protéines → `%prot`, glucides → `%carb`, lipides → `%fat`.
-4. **Read Health Data → Weight** : dernier enregistrement (fenêtre 7 jours pour éviter un `null` les jours sans pesée) → `%weight`.
-5. **Date locale fiable** — *JavaScriptlet* :
-   ```js
-   var date = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date());
-   ```
-   (évite les surprises de format/locale de `%DATE`.)
-6. **Assembler le body** — *Variable Set* `%body` (mets `null`, sans guillemets, pour tout champ vide) :
-   ```
-   {"date":"%date","steps":%steps,"kcal_in":%kcal_in,"kcal_out":%kcal_out,"protein_g":%prot,"carbs_g":%carb,"fat_g":%fat,"weight_kg":%weight}
-   ```
-7. **HTTP Request** :
-   - Method `POST`
-   - URL `https://rafraf.space/ingest/health`
-   - Headers : `content-type:application/json` **et** `x-ingest-token:<TOKEN>`
-   - Body `%body`
-8. (Optionnel) tester `%http_response_code == 200` → sinon *Flash* / notif d'erreur.
+### Les actions de la Task (dans l'ordre)
+Fais **un read par métrique** (une seule valeur en sortie = parsing trivial), fenêtre = **aujourd'hui 00:00 → maintenant**
+(réglée dans l'écran de config du plugin), et range chaque JSON dans sa variable :
 
-> Astuce : commence par câbler **seulement les pas** (le reste en `null`), prouve le POST, puis
-> ajoute les autres métriques une par une. Plus facile à débugger que tout d'un coup.
+| # | Action plugin : *Read Aggregated Data* | Métrique | Variable sortie |
+|---|---|---|---|
+| 1 | Steps | `COUNT_TOTAL` | `%hcsteps` |
+| 2 | Nutrition | `ENERGY_TOTAL` | `%hckcalin` |
+| 3 | Nutrition | `PROTEIN_TOTAL` | `%hcprot` |
+| 4 | Nutrition | `TOTAL_CARBOHYDRATE_TOTAL` | `%hccarb` |
+| 5 | Nutrition | `TOTAL_FAT_TOTAL` | `%hcfat` |
+| 6 | Total Calories Burned | `ENERGY_TOTAL` | `%hckcalout` |
+| 7 | Weight | `WEIGHT_AVG` (fenêtre = aujourd'hui) | `%hcweight` |
+
+> Poids : `WEIGHT_AVG` sur **aujourd'hui** = ta pesée du jour (si une seule). Aucune pesée aujourd'hui →
+> objet vide → on envoie `null`, et le front garde le poids du jour précédent. C'est le comportement voulu
+> (chaque jour stocke SA pesée ; le Δ7j est calculé côté serveur sur les jours stockés).
+
+### Action 8 — un seul JavaScriptlet qui extrait tout + assemble le body
+Colle ça dans une action **Code → JavaScriptlet** (les variables Tasker `%hcsteps`… sont exposées en JS sous `hcsteps`… ; la variable `body` créée ici ressort en `%body`) :
+
+```js
+// "la seule valeur" d'un JSON de read agrégé, ou null si vide/illisible
+function val(j){ try { var o=JSON.parse(j); var m=Object.assign({},o.longValues,o.doubleValues);
+  var v=Object.values(m)[0]; return (v==null)?null:v; } catch(e){ return null; } }
+function int(x){ return x==null ? "null" : Math.round(x); }          // entiers (pas, kcal)
+function one(x){ return x==null ? "null" : Math.round(x*10)/10; }     // 1 décimale (macros, poids)
+
+var date = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()); // local
+var body = '{"date":"'+date+'"'
+  + ',"steps":'     + int(val(hcsteps))
+  + ',"kcal_in":'   + int(val(hckcalin))
+  + ',"kcal_out":'  + int(val(hckcalout))
+  + ',"protein_g":' + one(val(hcprot))
+  + ',"carbs_g":'   + one(val(hccarb))
+  + ',"fat_g":'     + one(val(hcfat))
+  + ',"weight_kg":' + one(val(hcweight))
+  + '}';
+```
+
+### Action 9 — HTTP Request
+- Method `POST`
+- URL `https://rafraf.space/ingest/health`
+- Headers : `content-type:application/json` **et** `x-ingest-token:<TOKEN>`
+- Body `%body`
+- (Optionnel) action suivante : *If* `%http_response_code !~ 200` → *Flash* `Sport KO: %http_response_code %http_data` (le worker renvoie maintenant `400 bad json` / `403` lisibles, plus de 1101).
+
+> **Débug progressif** : commence avec **seulement l'action 1 (pas) + 8 + 9** (les autres `val()` renverront
+> `null` → `"null"` dans le body, toléré). Prouve le 200, vois les pas dans Graille, PUIS ajoute les
+> autres reads un par un.
+
+### ⚠️ Unités à sanity-checker au premier vrai run
+- **kcal** (`ENERGY_TOTAL`) : vérifie que `kcal_in` colle à Yazio. Si c'est ~4,18× trop grand, le plugin
+  sort des **kJ** → divise par 4,184 (`Math.round(val/4.184)`).
+- **macros / poids** : attendus en **grammes / kg**. Si un ordre de grandeur cloche, ajuste le facteur dans le JavaScriptlet.
 
 ---
 
