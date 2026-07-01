@@ -64,7 +64,8 @@ async function ingestHevy(request, env) {
 async function ingestHealth(request, env) {
   if (request.headers.get('x-ingest-token') !== env.INGEST_TOKEN) return new Response('forbidden', { status: 403 });
   if (!env.DB) return new Response('no DB binding', { status: 503 });
-  const d = await request.json();
+  let d;
+  try { d = await request.json(); } catch { return new Response('bad json', { status: 400 }); }
   if (!d?.date) return new Response('missing date', { status: 400 });
   await env.DB.prepare(
     `INSERT INTO daily (date, steps, kcal_in, kcal_out, protein_g, carbs_g, fat_g, weight_kg, updated_at)
