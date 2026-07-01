@@ -22,6 +22,7 @@ async function apiSport(env) {
   // Robuste : D1 pas branché OU schéma pas encore appliqué OU base vide
   // → dashboard vide propre, jamais une 500.
   let enriched = [];
+  let daily = [];
   if (env.DB) {
     try {
       const { results } = await env.DB.prepare('SELECT raw FROM workouts ORDER BY date ASC').all();
@@ -29,8 +30,14 @@ async function apiSport(env) {
     } catch {
       enriched = [];
     }
+    try {
+      const { results } = await env.DB.prepare('SELECT * FROM daily ORDER BY date DESC LIMIT 14').all();
+      daily = results || [];
+    } catch {
+      daily = [];
+    }
   }
-  return Response.json(buildDashboard(enriched), { headers: { 'cache-control': 'no-store' } });
+  return Response.json(buildDashboard(enriched, daily), { headers: { 'cache-control': 'no-store' } });
 }
 
 async function ingestHevy(request, env) {

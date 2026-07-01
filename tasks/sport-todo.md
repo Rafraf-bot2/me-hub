@@ -107,9 +107,9 @@
 ### ✅ PARTIE 4 TERMINÉE — /sport est live, privé, auto-synchronisé quotidiennement.
 
 ### 5. Health Connect (Palier steps + nutrition)
+- [x] **Partie A — chaîne de LECTURE santé (2026-06-30)** : `buildDashboard(enriched, daily)` produit un bloc `health` (latest + 7j + poids/delta) sur la fenêtre 7j ; `health: null` si pas de data (pull local intact). `apiSport` lit aussi la table `daily` (try/catch, jamais de 500). Front : les **3 tuiles Aperçu** (kcal mangées = `kcal_in` brut, pas de balance / pas / protéines) s'allument dès que la data remonte, sinon « à connecter » ; **onglet Graille complet** (hero kcal mangées + dépensées, macros prot/gluc/lip, poids + Δ7j, mini-histo pas 7j). Vérifié : lib (seed factice, tous les cas), front (preview mobile, Aperçu + Graille), fallback null. ⚠️ pas testé en `wrangler dev`/D1 réel (le SELECT est un calque exact du pattern `workouts` déjà prouvé ; toute la logique est dans `buildDashboard`, unit-testé).
 - [ ] Activer Samsung Health → Health Connect (sync). Vérifier que Yazio écrit aussi (déjà connecté ✅).
-- [ ] **Pont téléphone** : app webhook dédiée (fallback Tasker) → POST `/ingest/health` (token). Whitelister l'app du Doze batterie.
-- [ ] Vitals tiles (kcal/pas/protéines) passent de "à connecter" → vraies valeurs. Remplir l'onglet **Graille**.
+- [ ] **Partie B — Pont téléphone** : app webhook dédiée (fallback Tasker) → POST `/ingest/health` (header `x-ingest-token`, body `{date, steps, kcal_in, kcal_out, protein_g, carbs_g, fat_g, weight_kg}` — champs null tolérés). Whitelister l'app du Doze batterie. **= prochain pas, côté auteur (un guide reste à rédiger).**
 - [ ] Vérifier si HC porte les macros détaillées ou juste les totaux ; sinon rebrancher un export Yazio pour le détail.
 
 ### 6. Coach (A + B)
@@ -119,6 +119,16 @@
 
 ### 7. Hub
 - [ ] Brancher le monde **SPORT** dans `src/pages/index.astro` (array `worlds` + `accentByWorld` + set `LIVE`). NB : ça touche la home "figée" → confirmer avec l'auteur avant.
+
+### 8. PWA — installer /sport sur le tel (écran d'accueil)
+> But : lancer /sport en mode appli plein écran depuis l'icône du tel. La page est déjà mobile-first
+> (max-width 680px, dock = tab bar, hash routing) → bon candidat. Aujourd'hui : aucun manifest / SW
+> → "Ajouter à l'écran d'accueil" ne donne qu'un marque-page, pas un vrai mode standalone.
+- [ ] `public/manifest.webmanifest` : `display: standalone`, `theme_color #ccff00` / `background_color #0c0d09`, `start_url /sport`, `scope /sport`, nom + short_name.
+- [ ] **Icônes** 192 + 512 (maskable) : logo fluo `RAFRAF` (ink sur fond `#0c0d09`). Générer depuis la DA Variant.
+- [ ] `<head>` de `sport.astro` : `<link rel="manifest">` + `<meta name="theme-color">` + `apple-touch-icon` (iOS ignore le manifest pour l'icône).
+- [ ] Optionnel : **service worker** pour offline (cache de la coquille). Pas indispensable au départ.
+- [ ] ⚠️ **Piège Cloudflare Access** : en mode standalone le cookie Access n'est pas toujours partagé avec le navigateur → **re-login périodique** dans la fenêtre de l'appli (durée = session Access). Et le SW lui-même est derrière Access → offline réel bancal. Vérifier le comportement réel iOS/Android avant d'investir dans le SW.
 
 ---
 

@@ -14,11 +14,14 @@ const TABS = [
 const TAB_IDS = TABS.map((t) => t.id);
 const TONE = { alert: 'sp-flag-alert', good: 'sp-flag-good', warn: 'sp-flag-warn' };
 
+// Vitals de l'aperçu : clé = colonne `daily` (santé). Allumées dès que la data remonte,
+// sinon état "à connecter". kcal mangées = kcal_in brut (pas de balance), choix auteur.
 const VITALS = [
-  { label: 'balance kcal', icon: 'flame' },
-  { label: 'pas', icon: 'walk' },
-  { label: 'protéines', icon: 'meat' },
+  { key: 'kcal_in', label: 'kcal mangées', icon: 'flame' },
+  { key: 'steps', label: 'pas', icon: 'walk' },
+  { key: 'protein_g', label: 'protéines', icon: 'meat', unit: 'g' },
 ];
+const fmtVital = (key, v) => (key === 'steps' ? v.toLocaleString('fr-FR') : Math.round(v));
 
 export default function SportApp({ sport: initial }) {
   // Data : le JSON SSR sert de fallback ; en prod on rafraîchit depuis /api/sport
@@ -68,7 +71,7 @@ export default function SportApp({ sport: initial }) {
 
       {tab === 'apercu' && <Apercu sport={sport} m={m} />}
       {tab === 'muscu' && <Muscu sport={sport} m={m} />}
-      {tab === 'graille' && <Graille />}
+      {tab === 'graille' && <Graille sport={sport} />}
       {tab === 'coach' && <Coach sport={sport} />}
 
       <nav className="sp-dock" aria-label="Sections">
@@ -112,18 +115,31 @@ function Apercu({ sport, m }) {
       </section>
 
       <div className="sp-tiles">
-        {VITALS.map((v) => (
-          <div key={v.label} className="sp-tile sp-cream sp-pend">
-            <span className="sp-pend-val">—</span>
-            <span className="sp-tile-lab">
-              <i className={`ti ti-${v.icon} sp-lab-ic`} aria-hidden="true"></i>
-              {v.label}
-            </span>
-            <span className="sp-pend-tag">
-              <i className="ti ti-link" aria-hidden="true"></i> à connecter
-            </span>
-          </div>
-        ))}
+        {VITALS.map((v) => {
+          const val = sport.health?.latest?.[v.key];
+          const has = val != null;
+          return (
+            <div key={v.key} className={`sp-tile sp-cream ${has ? '' : 'sp-pend'}`}>
+              {has ? (
+                <span className="sp-tile-num">
+                  {fmtVital(v.key, val)}
+                  {v.unit && <span className="sp-unit">{v.unit}</span>}
+                </span>
+              ) : (
+                <span className="sp-pend-val">—</span>
+              )}
+              <span className="sp-tile-lab">
+                <i className={`ti ti-${v.icon} sp-lab-ic`} aria-hidden="true"></i>
+                {v.label}
+              </span>
+              {!has && (
+                <span className="sp-pend-tag">
+                  <i className="ti ti-link" aria-hidden="true"></i> à connecter
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <Week sport={sport} m={m} />
@@ -340,10 +356,113 @@ function MuscleMap({ muscles }) {
   );
 }
 
-function Graille() {
+const MACROS = [
+  { key: 'protein_g', label: 'protéines', icon: 'meat' },
+  { key: 'carbs_g', label: 'glucides', icon: 'bread' },
+  { key: 'fat_g', label: 'lipides', icon: 'droplet' },
+];
+const stepsK = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`);
+
+function Graille({ sport }) {
+  const h = sport.health;
+  // Pas encore de data santé → on garde le teaser (le pont Health Connect remplira la table `daily`).
+  if (!h?.latest) {
+    return (
+      <section className="sp-panel">
+        <Soon icon="apple" title="Graille" text="Calories, macros et repas — branchés dès que Health Connect remonte." />
+      </section>
+    );
+  }
+
+  const L = h.latest;
+  const dayLabel = `${L.date.slice(8)}/${L.date.slice(5, 7)}`;
+  const stepsMax = Math.max(1, ...h.days.map((d) => d.steps || 0));
+  const hasSteps = h.days.some((d) => d.steps != null);
+  const w = h.weight;
+
   return (
     <section className="sp-panel">
-      <Soon icon="apple" title="Graille" text="Calories, macros et repas — branchés dès que Health Connect remonte." />
+      <section className="sp-hero">
+        <span className="sp-kicker">GRAILLE · {dayLabel}</span>
+        <div className="sp-hero-row">
+          <div className="sp-hero-stat">
+            <span className="sp-hero-num">{L.kcal_in != null ? L.kcal_in.toLocaleString('fr-FR') : '—'}</span>
+            <span className="sp-hero-lab">
+              kcal
+              <br />
+              mangées
+            </span>
+          </div>
+          {L.kcal_out != null && (
+            <span className="sp-gr-out">
+              <i className="ti ti-flame-off" aria-hidden="true"></i>
+              {L.kcal_out.toLocaleString('fr-FR')} dépensées
+            </span>
+          )}
+        </div>
+      </section>
+
+      <div className="sp-tiles">
+        {MACROS.map((mac) => {
+          const v = L[mac.key];
+          return (
+            <div key={mac.key} className="sp-tile sp-cream">
+              <span className="sp-tile-num">
+                {v != null ? Math.round(v) : '—'}
+                {v != null && <span className="sp-unit">g</span>}
+              </span>
+              <span className="sp-tile-lab">
+                <i className={`ti ti-${mac.icon} sp-lab-ic`} aria-hidden="true"></i>
+                {mac.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {w && (
+        <section className="sp-block sp-darkblock">
+          <div className="sp-block-head">
+            <span className="sp-block-title">Poids</span>
+            <span className="sp-via">7 DERNIERS JOURS</span>
+          </div>
+          <div className="sp-gr-weight">
+            <span className="sp-gr-wnum">
+              {w.current}
+              <span className="sp-unit">kg</span>
+            </span>
+            {w.delta_7d != null && w.delta_7d !== 0 && (
+              <span className={`sp-gr-delta ${w.delta_7d < 0 ? 'sp-gr-down' : 'sp-gr-up'}`}>
+                <i className={`ti ti-arrow-${w.delta_7d < 0 ? 'down' : 'up'}-right`} aria-hidden="true"></i>
+                {w.delta_7d > 0 ? '+' : ''}{w.delta_7d} kg
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {hasSteps && (
+        <section className="sp-block sp-darkblock sp-gr-hist">
+          <div className="sp-block-head">
+            <span className="sp-block-title">Pas</span>
+            <span className="sp-via">7 DERNIERS JOURS</span>
+          </div>
+          <div className="sp-bars">
+            {h.days.map((d) => (
+              <div className="sp-bar-row" key={d.date}>
+                <span className="sp-bar-lab">{d.letter} {d.day}</span>
+                <div className="sp-bar-track">
+                  <div
+                    className="sp-bar-fill"
+                    style={{ width: `${d.steps ? Math.max(5, (d.steps / stepsMax) * 100) : 0}%` }}
+                  />
+                </div>
+                <span className="sp-bar-val">{d.steps != null ? stepsK(d.steps) : '—'}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
 }

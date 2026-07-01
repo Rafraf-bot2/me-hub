@@ -71,9 +71,47 @@ export function coach(m) {
   return { verdict, flags };
 }
 
-// workouts enrichis (calculés/stockés) → dashboard complet.
-// Fenêtre glissante = les 7 derniers jours à `now` (today inclus).
-export function buildDashboard(enriched, now = new Date()) {
+// Santé (table `daily`, via Health Connect) → bloc lecture sur la même fenêtre 7j.
+// `null` si aucune ligne exploitable : le front retombe alors sur ses stubs.
+const HEALTH_FIELDS = ['steps', 'kcal_in', 'kcal_out', 'protein_g', 'carbs_g', 'fat_g', 'weight_kg'];
+
+function buildHealth(daily, now, startKey, todayKey) {
+  const win = daily
+    .filter((d) => d.date >= startKey && d.date <= todayKey)
+    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const withData = win.filter((d) => HEALTH_FIELDS.some((k) => d[k] != null));
+  if (!withData.length) return null;
+
+  const src = withData[withData.length - 1]; // jour le + récent avec ≥ 1 valeur
+  const latest = { date: src.date };
+  for (const k of HEALTH_FIELDS) latest[k] = src[k] ?? null;
+
+  // 7 cases alignées sur la fenêtre (alimente la mini-histo Graille)
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date(now); dt.setDate(now.getDate() - 6 + i);
+    const key = dayKey(dt);
+    const row = win.find((d) => d.date === key) || null;
+    return {
+      date: key, letter: FR_LETTERS[dt.getDay()], day: dt.getDate(),
+      steps: row?.steps ?? null, kcal_in: row?.kcal_in ?? null, protein_g: row?.protein_g ?? null,
+    };
+  });
+
+  // poids : dernier non nul + variation vs le premier non nul de la fenêtre
+  const weighed = win.filter((d) => d.weight_kg != null);
+  let weight = null;
+  if (weighed.length) {
+    const current = weighed[weighed.length - 1].weight_kg;
+    weight = { current, delta_7d: weighed.length > 1 ? +(current - weighed[0].weight_kg).toFixed(1) : null };
+  }
+
+  return { latest, days, weight };
+}
+
+// workouts enrichis (calculés/stockés) + lignes santé `daily` → dashboard complet.
+// Fenêtre glissante = les 7 derniers jours à `now` (today inclus). `daily` optionnel
+// (le pull local n'a pas la santé → bloc `health: null`, aucune régression).
+export function buildDashboard(enriched, daily = [], now = new Date()) {
   const winStart = new Date(now); winStart.setDate(now.getDate() - 6);
   const startKey = dayKey(winStart), todayKey = dayKey(now);
   const thisWeek = enriched.filter((e) => e.date >= startKey && e.date <= todayKey);
@@ -114,9 +152,10 @@ export function buildDashboard(enriched, now = new Date()) {
   }));
 
   const { verdict, flags } = coach(muscu);
+  const health = buildHealth(daily, now, startKey, todayKey);
   return {
     week: { start: startKey, end: todayKey, days, rest },
-    muscu, recent, verdict, flags,
+    muscu, recent, verdict, flags, health,
     generated_at: new Date().toISOString(),
   };
 }
