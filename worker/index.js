@@ -66,7 +66,8 @@ async function ingestHealth(request, env) {
   if (!env.DB) return new Response('no DB binding', { status: 503 });
   let d;
   try { d = await request.json(); } catch { return new Response('bad json', { status: 400 }); }
-  if (!d?.date) return new Response('missing date', { status: 400 });
+  // `date` optionnelle : par défaut = aujourd'hui en heure de Paris (le pont tel n'a pas à la calculer).
+  const date = d?.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Paris' });
   await env.DB.prepare(
     `INSERT INTO daily (date, steps, kcal_in, kcal_out, protein_g, carbs_g, fat_g, weight_kg, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -75,8 +76,8 @@ async function ingestHealth(request, env) {
        protein_g=excluded.protein_g, carbs_g=excluded.carbs_g, fat_g=excluded.fat_g,
        weight_kg=excluded.weight_kg, updated_at=excluded.updated_at`
   ).bind(
-    d.date, d.steps ?? null, d.kcal_in ?? null, d.kcal_out ?? null,
-    d.protein_g ?? null, d.carbs_g ?? null, d.fat_g ?? null, d.weight_kg ?? null,
+    date, d?.steps ?? null, d?.kcal_in ?? null, d?.kcal_out ?? null,
+    d?.protein_g ?? null, d?.carbs_g ?? null, d?.fat_g ?? null, d?.weight_kg ?? null,
     new Date().toISOString()
   ).run();
   return Response.json({ ok: true });
