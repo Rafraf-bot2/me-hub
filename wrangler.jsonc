@@ -6,6 +6,10 @@
   "name": "me-hub",
   "compatibility_date": "2026-06-26",
   "main": "worker/index.js",
+  // PRIVACY : couper le sous-domaine *.workers.dev (public, HORS Cloudflare Access).
+  // Le site n'est servi QUE via le domaine custom rafraf.space (gardé par Access).
+  // Sans ça, un `wrangler deploy` rouvre workers.dev et /api/sport fuite la data.
+  "workers_dev": false,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS"
